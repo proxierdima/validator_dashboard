@@ -101,53 +101,219 @@ tbody td {
   font-size: 14px;
 }
 
-tbody tr:hover {
+.network-row {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.network-row:hover {
   background: #1b212b;
 }
 
-.dashboard-row {
-  position: relative;
+.network-row.active {
+  background: #1a2330;
 }
 
-.hover-anchor {
-  position: relative;
-}
-
-.hover-card {
+.network-details-row {
   display: none;
-  position: absolute;
-  top: 100%;
-  left: 0;
-  margin-top: 8px;
-  min-width: 340px;
-  max-width: 460px;
+}
+
+.network-details-row.open {
+  display: table-row;
+}
+
+.network-details-row td {
+  padding: 0;
+  border-bottom: 1px solid #202734;
+}
+
+.network-details-box {
   background: #11161d;
-  border: 1px solid #2a3240;
-  border-radius: 12px;
-  padding: 14px 16px;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
-  z-index: 50;
+  border-top: 1px solid #2a3240;
+  padding: 0;
 }
 
-.dashboard-row:hover .hover-card {
-  display: block;
+.details-panel {
+  padding: 18px 20px 20px;
 }
 
-.hover-card-title {
-  font-size: 15px;
+.details-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.details-title {
+  font-size: 18px;
   font-weight: 700;
-  margin-bottom: 10px;
   color: #ffffff;
 }
 
-.hover-grid {
-  display: grid;
-  grid-template-columns: 130px 1fr;
-  gap: 8px 12px;
+.details-subtitle {
+  margin-top: 4px;
   font-size: 13px;
-  line-height: 1.35;
+  color: #9aa4b2;
 }
 
-.hover-label {
+.details-overall {
+  display: flex;
+  align-items: center;
+}
+
+.details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.details-item {
+  background: #161c25;
+  border: 1px solid #273140;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.details-item-wide {
+  grid-column: 1 / -1;
+}
+
+.details-label {
   color: #9aa4b2;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.details-value {
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.mono {
+  font-family: Consolas, Menlo, Monaco, monospace;
+  font-size: 14px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 86px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.badge-ok {
+  background: rgba(46, 204, 113, 0.15);
+  color: #7ee2a8;
+  border: 1px solid rgba(46, 204, 113, 0.35);
+}
+
+.badge-warning {
+  background: rgba(241, 196, 15, 0.14);
+  color: #ffd869;
+  border: 1px solid rgba(241, 196, 15, 0.35);
+}
+
+.badge-critical {
+  background: rgba(231, 76, 60, 0.14);
+  color: #ff8a7d;
+  border: 1px solid rgba(231, 76, 60, 0.35);
+}
+
+.badge-unknown {
+  background: rgba(189, 195, 199, 0.12);
+  color: #d8dce0;
+  border: 1px solid rgba(189, 195, 199, 0.28);
+}
+
+.details-error {
+  margin-top: 10px;
+  color: #ff9a8d;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.details-slash-params {
+  color: #9aa4b2;
+  font-size: 12px;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.details-slash-values {
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.rpc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rpc-row {
+  background: #161c25;
+  border: 1px solid #273140;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.rpc-url {
+  color: #d9e3f0;
+  margin-bottom: 8px;
+}
+
+.rpc-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.rpc-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #1c2430;
+  color: #d2d9e3;
+  border: 1px solid #2a3444;
+}
+
+.tabs{
+  margin-bottom:15px;
+}
+
+.tab-button{
+  padding:8px 16px;
+  border:none;
+  background:#222;
+  color:#aaa;
+  cursor:pointer;
+}
+
+.tab-button.active{
+  background:#444;
+  color:#fff;
+}
+
+.tabcontent{
+  display:none;
+}
+
+.tabcontent.active{
+  display:block;
 }

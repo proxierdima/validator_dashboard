@@ -1,0 +1,9 @@
+[
+  {
+    "network": "Lava",
+    "chain_id": "lava-mainnet-1",
+    "valoper": "lavavaloper1kwk34225f9eq3sklaf7xws8mc9lhu6sxhh57pj",
+    "rest": "https://lava.rest.lava.build",
+    "reason": "commission_query_failed"
+  }
+]

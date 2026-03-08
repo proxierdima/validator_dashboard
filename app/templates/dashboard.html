@@ -43,7 +43,7 @@
     </thead>
     <tbody>
       {% for row in items %}
-      <tr>
+      <tr class="network-row">
         <td>{{ row.overall_emoji }} {{ row.overall_status or 'unknown' }}</td>
         <td>
           <strong>{{ row.display_name or row.name }}</strong><br>
@@ -61,8 +61,152 @@
         <td>{{ row.active_alerts_count or 0 }}</td>
         <td>{{ row.last_updated_at or '' }}</td>
       </tr>
+
+      <tr class="network-details-row">
+        <td colspan="10">
+          <div class="network-details-box">
+            <div class="details-panel">
+              <div class="details-panel-header">
+                <div>
+                  <div class="details-title">{{ row.display_name or row.name }}</div>
+                  <div class="details-subtitle">{{ row.name }}</div>
+                </div>
+                <div class="details-overall">
+                  <span class="badge
+                    {% if (row.overall_status or 'unknown') == 'ok' %}badge-ok{% elif (row.overall_status or 'unknown') == 'warning' %}badge-warning{% elif (row.overall_status or 'unknown') == 'critical' %}badge-critical{% else %}badge-unknown{% endif %}">
+                    {{ row.overall_status or 'unknown' }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="details-grid">
+                <div class="details-item">
+                  <div class="details-label">Validator status</div>
+                  <div class="details-slash-params">Status / Jailed / Commission / Self delegation / Last seen height</div>
+                  <div class="details-slash-values mono">
+                    {{ row.validator_status_display }} / {{ row.validator_jailed_display }} / {{ row.validator_commission_display }} / {{ row.validator_self_delegation_display }} / {{ row.validator_last_seen_height_display }}
+                  </div>
+                  {% if row.validator_status_reason %}
+                  <div class="details-error">{{ row.validator_status_reason }}</div>
+                  {% endif %}
+                </div>
+
+                <div class="details-item">
+                  <div class="details-label">Moniker</div>
+                  <div class="details-value">{{ row.moniker or '—' }}</div>
+                </div>
+
+                <div class="details-item">
+                  <div class="details-label">Reference height / Open alerts</div>
+                  <div class="details-slash-values mono">
+                    {{ row.reference_height or '—' }} / {{ row.active_alerts_count or 0 }}
+                  </div>
+                </div>
+
+                <div class="details-item">
+                  <div class="details-label">Local height / Diff / Updated</div>
+                  <div class="details-slash-values mono">
+                    {{ row.local_height or '—' }} / {{ row.sync_diff if row.sync_diff is not none else '—' }} / {{ row.last_updated_at or '—' }}
+                  </div>
+                </div>
+
+                <div class="details-item details-item-wide">
+                  <div class="details-label">Validator RPC details</div>
+
+                  {% if row.validator_rpc_details %}
+                  <div class="rpc-list">
+                    {% for rpc in row.validator_rpc_details %}
+                    <div class="rpc-row">
+                      <div class="rpc-url mono">{{ rpc.url }}</div>
+                      <div class="rpc-meta">
+                        <span class="badge
+                          {% if rpc.status == 'ok' %}badge-ok{% elif rpc.status == 'warning' %}badge-warning{% elif rpc.status == 'critical' %}badge-critical{% else %}badge-unknown{% endif %}">
+                          {{ rpc.status }}
+                        </span>
+
+                        {% if rpc.http_status %}
+                        <span class="rpc-chip">HTTP {{ rpc.http_status }}</span>
+                        {% endif %}
+
+                        {% if rpc.latency_ms is not none %}
+                        <span class="rpc-chip">{{ rpc.latency_ms }} ms</span>
+                        {% endif %}
+
+                        {% if rpc.remote_height %}
+                        <span class="rpc-chip">height {{ rpc.remote_height }}</span>
+                        {% endif %}
+                      </div>
+
+                      {% if rpc.error_message %}
+                      <div class="details-error">Reason: {{ rpc.error_message }}</div>
+                      {% endif %}
+                    </div>
+                    {% endfor %}
+                  </div>
+                  {% else %}
+                  <div class="details-error">No validator RPC checks found yet. Run endpoint_health_collector.</div>
+                  {% endif %}
+                </div>
+
+                <div class="details-item">
+                  <div class="details-label">Validator RPC summary</div>
+                  <div class="details-value">
+                    <span class="badge
+                      {% if row.validator_rpc_status == 'ok' %}badge-ok{% elif row.validator_rpc_status == 'warning' %}badge-warning{% elif row.validator_rpc_status == 'critical' %}badge-critical{% else %}badge-unknown{% endif %}">
+                      {{ row.validator_rpc_status or 'unknown' }}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="details-item">
+                  <div class="details-label">Sync status</div>
+                  <div class="details-value">
+                    <span class="badge
+                      {% if row.sync_status == 'ok' %}badge-ok{% elif row.sync_status == 'warning' %}badge-warning{% elif row.sync_status == 'critical' %}badge-critical{% else %}badge-unknown{% endif %}">
+                      {{ row.sync_status or 'unknown' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </td>
+      </tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
+
+<script>
+(function () {
+  const rows = document.querySelectorAll(".network-row");
+
+  function closeAllDetails() {
+    document.querySelectorAll(".network-details-row").forEach((row) => {
+      row.classList.remove("open");
+    });
+
+    document.querySelectorAll(".network-row").forEach((row) => {
+      row.classList.remove("active");
+    });
+  }
+
+  rows.forEach((row) => {
+    row.addEventListener("click", () => {
+      const detailsRow = row.nextElementSibling;
+      if (!detailsRow || !detailsRow.classList.contains("network-details-row")) {
+        return;
+      }
+
+      const isAlreadyOpen = detailsRow.classList.contains("open");
+      closeAllDetails();
+
+      if (!isAlreadyOpen) {
+        detailsRow.classList.add("open");
+        row.classList.add("active");
+      }
+    });
+  });
+})();
+</script>
 {% endblock %}

@@ -18,6 +18,7 @@ from app.models import (
     SnapshotCheck,
     SnapshotTarget,
     Validator,
+    ValidatorStatusCurrent,
 )
 
 router = APIRouter(tags=["dashboard"])
@@ -49,6 +50,46 @@ def collapse_status(statuses: list[str | None]) -> str:
     return "unknown"
 
 
+def bool_to_yes_no(value) -> str:
+    if value in (1, True, "1", "true", "True"):
+        return "Yes"
+    if value in (0, False, "0", "false", "False"):
+        return "No"
+    return "—"
+
+
+def normalize_validator_status(value: str | None) -> str:
+    if not value:
+        return "—"
+
+    v = value.lower()
+    if v in ("bonded", "bond_status_bonded", "active"):
+        return "Bonded"
+    if v in ("unbonding", "bond_status_unbonding"):
+        return "Unbonding"
+    if v in ("unbonded", "bond_status_unbonded", "inactive"):
+        return "Unbonded"
+    return value
+
+
+def format_commission(rate: str | None) -> str:
+    if not rate:
+        return "—"
+    try:
+        pct = float(rate) * 100
+        if pct.is_integer():
+            return f"{int(pct)}%"
+        return f"{pct:.2f}%"
+    except Exception:
+        return rate
+
+
+def validator_status_reason(row) -> str:
+    if row["validator_chain_status"] or row["validator_commission_rate"] or row["validator_last_seen_height"]:
+        return ""
+    return "No validator status data in validator_status_current. Check validator_status_collector and public REST for this network."
+
+
 @router.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request, db: Session = Depends(get_db)):
     latest_endpoint_subq = (
@@ -63,7 +104,13 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
     latest_validator_rpc_rows = db.execute(
         select(
             NetworkEndpoint.network_id,
+            NetworkEndpoint.url,
             EndpointCheck.status,
+            EndpointCheck.http_status,
+            EndpointCheck.latency_ms,
+            EndpointCheck.remote_height,
+            EndpointCheck.error_message,
+            EndpointCheck.checked_at,
         )
         .join(
             latest_endpoint_subq,
@@ -79,11 +126,25 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
         .where(NetworkEndpoint.endpoint_type == "rpc")
         .where(NetworkEndpoint.is_enabled == 1)
         .where(NetworkEndpoint.is_public == 0)
+        .order_by(NetworkEndpoint.network_id.asc(), NetworkEndpoint.priority.asc(), NetworkEndpoint.id.asc())
     ).all()
 
-    validator_rpc_map = defaultdict(list)
-    for network_id, status in latest_validator_rpc_rows:
-        validator_rpc_map[network_id].append(status)
+    validator_rpc_status_map = defaultdict(list)
+    validator_rpc_details_map = defaultdict(list)
+
+    for network_id, url, status, http_status, latency_ms, remote_height, error_message, checked_at in latest_validator_rpc_rows:
+        validator_rpc_status_map[network_id].append(status)
+        validator_rpc_details_map[network_id].append(
+            {
+                "url": url,
+                "status": status or "unknown",
+                "http_status": http_status,
+                "latency_ms": latency_ms,
+                "remote_height": remote_height,
+                "error_message": error_message or "",
+                "checked_at": checked_at,
+            }
+        )
 
     rows = db.execute(
         select(
@@ -101,9 +162,15 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
             NetworkStatusCurrent.sync_diff,
             NetworkStatusCurrent.active_alerts_count,
             NetworkStatusCurrent.last_updated_at,
+            ValidatorStatusCurrent.status.label("validator_chain_status"),
+            ValidatorStatusCurrent.jailed.label("validator_jailed"),
+            ValidatorStatusCurrent.commission_rate.label("validator_commission_rate"),
+            ValidatorStatusCurrent.self_delegation_amount.label("validator_self_delegation_amount"),
+            ValidatorStatusCurrent.last_seen_height.label("validator_last_seen_height"),
         )
         .join(Validator, Validator.network_id == Network.id)
         .join(NetworkStatusCurrent, NetworkStatusCurrent.network_id == Network.id, isouter=True)
+        .join(ValidatorStatusCurrent, ValidatorStatusCurrent.validator_id == Validator.id, isouter=True)
         .where(Network.is_enabled == 1)
         .where(Validator.is_enabled == 1)
         .where(Validator.is_main == 1)
@@ -115,7 +182,8 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
 
     items = []
     for r in rows:
-        validator_rpc_status = collapse_status(validator_rpc_map.get(r["network_id"], []))
+        validator_rpc_status = collapse_status(validator_rpc_status_map.get(r["network_id"], []))
+        rpc_details = validator_rpc_details_map.get(r["network_id"], [])
 
         items.append(
             {
@@ -126,6 +194,13 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
                 "sync_emoji": status_emoji(r["sync_status"]),
                 "snapshot_emoji": status_emoji(r["snapshot_status"]),
                 "overall_emoji": status_emoji(r["overall_status"]),
+                "validator_status_display": normalize_validator_status(r["validator_chain_status"]),
+                "validator_jailed_display": bool_to_yes_no(r["validator_jailed"]),
+                "validator_commission_display": format_commission(r["validator_commission_rate"]),
+                "validator_self_delegation_display": r["validator_self_delegation_amount"] or "—",
+                "validator_last_seen_height_display": r["validator_last_seen_height"] or "—",
+                "validator_status_reason": validator_status_reason(r),
+                "validator_rpc_details": rpc_details,
             }
         )
 
@@ -143,6 +218,33 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
             "request": request,
             "items": items,
             "totals": totals,
+        },
+    )
+
+
+@router.get("/dashboard/rewards", response_class=HTMLResponse)
+def dashboard_rewards(request: Request, db: Session = Depends(get_db)):
+    try:
+        rows = db.execute(
+            select(
+                func.coalesce(func.nullif(Network.display_name, ""), Network.name).label("network_title"),
+                Validator.moniker,
+                func.count().label("tx_count"),
+            )
+            .select_from(Validator)
+            .join(Network, Network.id == Validator.network_id)
+            .where(Validator.is_main == 1)
+            .group_by(Network.display_name, Network.name, Validator.moniker)
+            .order_by(func.count().desc(), Network.name.asc())
+        ).mappings().all()
+    except Exception:
+        rows = []
+
+    return templates.TemplateResponse(
+        "rewards.html",
+        {
+            "request": request,
+            "items": rows,
         },
     )
 

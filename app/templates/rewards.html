@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="panel">
+  <div class="panel-title">Rewards</div>
+
+  <div class="tabs">
+    <button class="tab-button active" onclick="openTab('networks')">By Network</button>
+    <button class="tab-button" onclick="openTab('tokens')">By Token</button>
+  </div>
+
+  <!-- NETWORK TAB -->
+
+  <div id="networks" class="tabcontent active">
+    <table>
+      <thead>
+        <tr>
+          <th>Network</th>
+          <th>Total USD</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for r in networks %}
+        <tr>
+          <td>{{ r.network }}</td>
+          <td>${{ "%.2f"|format(r.total) }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- TOKEN TAB -->
+
+  <div id="tokens" class="tabcontent">
+    <table>
+      <thead>
+        <tr>
+          <th>Token</th>
+          <th>Amount</th>
+          <th>Total USD</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for r in tokens %}
+        <tr>
+          <td>{{ r.token }}</td>
+          <td>{{ "%.6f"|format(r.amount) }}</td>
+          <td>${{ "%.2f"|format(r.usd) }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+
+function openTab(name){
+
+  let tabs = document.getElementsByClassName("tabcontent")
+  let buttons = document.getElementsByClassName("tab-button")
+
+  for(let i=0;i<tabs.length;i++){
+    tabs[i].classList.remove("active")
+  }
+
+  for(let i=0;i<buttons.length;i++){
+    buttons[i].classList.remove("active")
+  }
+
+  document.getElementById(name).classList.add("active")
+  event.target.classList.add("active")
+
+}
+
+</script>
+
+{% endblock %}
