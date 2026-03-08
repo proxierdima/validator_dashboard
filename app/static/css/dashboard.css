@@ -1,0 +1,153 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #0f1115;
+  color: #e8e8e8;
+}
+
+.container {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.topbar h1 {
+  margin: 0 0 6px;
+  font-size: 28px;
+}
+
+.nav {
+  display: flex;
+  gap: 16px;
+}
+
+.nav a {
+  color: #9ecbff;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.muted {
+  color: #9aa4b2;
+  font-size: 13px;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(160px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.card {
+  background: #171b22;
+  border: 1px solid #242b36;
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.card .label {
+  color: #9aa4b2;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.card .value {
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.panel {
+  background: #171b22;
+  border: 1px solid #242b36;
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.panel-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead th {
+  text-align: left;
+  font-size: 13px;
+  color: #9aa4b2;
+  border-bottom: 1px solid #2a3240;
+  padding: 12px 10px;
+}
+
+tbody td {
+  padding: 12px 10px;
+  border-bottom: 1px solid #202734;
+  vertical-align: top;
+  font-size: 14px;
+}
+
+tbody tr:hover {
+  background: #1b212b;
+}
+
+.dashboard-row {
+  position: relative;
+}
+
+.hover-anchor {
+  position: relative;
+}
+
+.hover-card {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 8px;
+  min-width: 340px;
+  max-width: 460px;
+  background: #11161d;
+  border: 1px solid #2a3240;
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+  z-index: 50;
+}
+
+.dashboard-row:hover .hover-card {
+  display: block;
+}
+
+.hover-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: #ffffff;
+}
+
+.hover-grid {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 8px 12px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.hover-label {
+  color: #9aa4b2;
+}

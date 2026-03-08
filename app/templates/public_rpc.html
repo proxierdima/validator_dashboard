@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="panel">
+  <div class="panel-title">Public RPC endpoints</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Network</th>
+        <th>Label</th>
+        <th>Status</th>
+        <th>URL</th>
+        <th>HTTP</th>
+        <th>Latency ms</th>
+        <th>Height</th>
+        <th>Reported chain_id</th>
+        <th>Error</th>
+        <th>Checked</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in items %}
+      <tr>
+        <td>{{ row.network_display_name or row.network_name }}</td>
+        <td>{{ row.label or '' }}</td>
+        <td>{{ status_emoji(row.status) }} {{ row.status or 'unknown' }}</td>
+        <td>{{ row.url }}</td>
+        <td>{{ row.http_status or '' }}</td>
+        <td>{{ row.latency_ms or '' }}</td>
+        <td>{{ row.remote_height or '' }}</td>
+        <td>{{ row.chain_id_reported or '' }}</td>
+        <td>{{ row.error_message or '' }}</td>
+        <td>{{ row.checked_at or '' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

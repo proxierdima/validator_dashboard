@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="cards">
+  <div class="card">
+    <div class="label">Networks</div>
+    <div class="value">{{ totals.networks }}</div>
+  </div>
+  <div class="card">
+    <div class="label">OK</div>
+    <div class="value">{{ totals.ok }}</div>
+  </div>
+  <div class="card">
+    <div class="label">Warning</div>
+    <div class="value">{{ totals.warning }}</div>
+  </div>
+  <div class="card">
+    <div class="label">Critical</div>
+    <div class="value">{{ totals.critical }}</div>
+  </div>
+  <div class="card">
+    <div class="label">Open alerts</div>
+    <div class="value">{{ totals.alerts }}</div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-title">Networks overview</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Overall</th>
+        <th>Network</th>
+        <th>Validator</th>
+        <th>Validator RPC</th>
+        <th>Sync</th>
+        <th>Local height</th>
+        <th>Reference height</th>
+        <th>Diff</th>
+        <th>Alerts</th>
+        <th>Updated</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in items %}
+      <tr>
+        <td>{{ row.overall_emoji }} {{ row.overall_status or 'unknown' }}</td>
+        <td>
+          <strong>{{ row.display_name or row.name }}</strong><br>
+          <span class="muted">{{ row.name }}</span>
+        </td>
+        <td>
+          {{ row.validator_emoji }} {{ row.validator_status or 'unknown' }}<br>
+          <span class="muted">{{ row.moniker or '' }}</span>
+        </td>
+        <td>{{ row.validator_rpc_emoji }} {{ row.validator_rpc_status }}</td>
+        <td>{{ row.sync_emoji }} {{ row.sync_status or 'unknown' }}</td>
+        <td>{{ row.local_height or '' }}</td>
+        <td>{{ row.reference_height or '' }}</td>
+        <td>{{ row.sync_diff if row.sync_diff is not none else '' }}</td>
+        <td>{{ row.active_alerts_count or 0 }}</td>
+        <td>{{ row.last_updated_at or '' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

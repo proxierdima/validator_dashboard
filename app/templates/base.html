@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Validator Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="10">
+  <link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body>
+  <div class="container">
+    <header class="topbar">
+      <div>
+        <h1>Validator Dashboard</h1>
+        <p class="muted">PostHuman monitoring panel</p>
+      </div>
+      <nav class="nav">
+        <a href="/dashboard">Overview</a>
+        <a href="/dashboard/public-rpc">Public RPC</a>
+        <a href="/dashboard/alerts">Alerts</a>
+        <a href="/dashboard/snapshots">Snapshots</a>
+      </nav>
+    </header>
+
+    {% block content %}{% endblock %}
+  </div>
+</body>
+</html>
