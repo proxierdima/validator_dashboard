@@ -42,7 +42,7 @@
       </tr>
     </thead>
     <tbody>
-      {% for row in items %}
+      {% for row in rows %}
       <tr class="network-row">
         <td>{{ row.overall_emoji }} {{ row.overall_status or 'unknown' }}</td>
         <td>
@@ -82,9 +82,9 @@
               <div class="details-grid">
                 <div class="details-item">
                   <div class="details-label">Validator status</div>
-                  <div class="details-slash-params">Status / Jailed / Commission / Self delegation / Last seen height</div>
+                  <div class="details-slash-params">Status / Jailed / Commission / Self delegation / Total delegation / Last seen height</div>
                   <div class="details-slash-values mono">
-                    {{ row.validator_status_display }} / {{ row.validator_jailed_display }} / {{ row.validator_commission_display }} / {{ row.validator_self_delegation_display }} / {{ row.validator_last_seen_height_display }}
+                    {{ row.validator_status_display }} / {{ row.validator_jailed_display }} / {{ row.validator_commission_display }} / {{ row.validator_self_delegation_display }} / {{ row.validator_total_delegation_display }} / {{ row.validator_last_seen_height_display }}
                   </div>
                   {% if row.validator_status_reason %}
                   <div class="details-error">{{ row.validator_status_reason }}</div>

@@ -15,7 +15,7 @@ from app.core.db import SessionLocal
 from app.models import Network, NetworkAsset, TrackedNetwork
 
 REPO_URL = "https://github.com/cosmos/chain-registry.git"
-LOCAL_DIR = Path("chain_registry")
+LOCAL_DIR = Path("chain-registry")
 
 
 def update_registry():

@@ -1,3 +1,28 @@
+# python
+__pycache__/
+*.pyc
+
+# venv
+.venv/
+venv/
+
+# db
+*.db
+
+# logs
+logs/
+
+# snapshots
+commission_snapshot.json
+missing_networks.json
+
+# env
+.env
+
+# misc
+*.log
+.DS_Store
+
 .env
 __pycache__/
 *.pyc

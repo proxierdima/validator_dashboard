@@ -6,9 +6,9 @@ from __future__ import annotations
 import json
 import os
 import sys
-from pathlib import Path
-from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timezone
+from pathlib import Path
 import multiprocessing
 
 import requests
@@ -25,13 +25,7 @@ load_dotenv()
 CG_PRICE_URL = "https://api.coingecko.com/api/v3/simple/price"
 CG_SEARCH_URL = "https://api.coingecko.com/api/v3/search"
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-CHAT_ID = os.getenv("CHAT_ID")
 CG_API_KEY = os.getenv("CG_API_KEY")
-
-if not BOT_TOKEN or not CHAT_ID:
-    raise RuntimeError("BOT_TOKEN or CHAT_ID not set")
-
 if not CG_API_KEY:
     raise RuntimeError("CG_API_KEY not set")
 
@@ -50,16 +44,6 @@ def http_get(url, params=None):
         return r.json()
     except Exception:
         return None
-
-
-def send_telegram(text):
-    if not BOT_TOKEN or not CHAT_ID:
-        return
-    requests.post(
-        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-        data={"chat_id": CHAT_ID, "text": text, "parse_mode": "HTML"},
-        timeout=10,
-    )
 
 
 def fetch_prices_by_ids(ids: set[str]) -> dict[str, float]:
@@ -156,7 +140,10 @@ def get_sources_from_db():
 def get_commission(rest_url: str, valoper: str):
     if not rest_url:
         return [], "no_public_rest"
-    data = http_get(f"{rest_url}/cosmos/distribution/v1beta1/validators/{valoper}/commission")
+
+    data = http_get(
+        f"{rest_url}/cosmos/distribution/v1beta1/validators/{valoper}/commission"
+    )
     if data:
         return data.get("commission", {}).get("commission", []), None
     return [], "commission_query_failed"
@@ -276,31 +263,8 @@ def main():
         totals_by_network[r["network"]] += total
         grand_total += total
 
-    rows.sort(key=lambda r: (r["network"], -r["total"]))
-
-    print("\nNETWORK | DENOM | AMOUNT | PRICE | TOTAL | REST")
-    print("-" * 120)
-    for r in rows:
-        print(
-            f"{r['network'][:20]:20} | "
-            f"{r['display'][:16]:16} | "
-            f"{r['amount']:14.6f} | "
-            f"{r['price']:10.6f} | "
-            f"{r['total']:10.2f} | "
-            f"{r['rest_used']}"
-        )
-
-    print("\n--- TOTALS BY NETWORK ---")
-    for n, t in sorted(totals_by_network.items()):
-        print(f"{n:20} | {t:10.2f}")
-
-    print(f"\n=== GRAND TOTAL USD: {grand_total:.2f} ===")
-
-    msg = "<b>Validator Commission Report</b>\n\n"
-    for n, t in sorted(totals_by_network.items()):
-        msg += f"{n}: <b>${t:.2f}</b>\n"
-    msg += f"\n<b>Total:</b> ${grand_total:.2f}"
-    send_telegram(msg)
+    rows.sort(key=lambda r: r["total"], reverse=True)
+    totals_by_network = dict(sorted(totals_by_network.items(), key=lambda x: x[1], reverse=True))
 
     with open("commission_snapshot.json", "w", encoding="utf-8") as f:
         json.dump(
@@ -318,9 +282,17 @@ def main():
     with open("missing_networks.json", "w", encoding="utf-8") as f:
         json.dump(missing, f, indent=2, ensure_ascii=False)
 
-    print("\n✓ Telegram sent")
-    print("✓ commission_snapshot.json saved")
-    print("✓ missing_networks.json saved")
+    print(
+        json.dumps(
+            {
+                "status": "ok",
+                "rows_count": len(rows),
+                "missing_count": len(missing),
+                "grand_total": round(grand_total, 2),
+            },
+            ensure_ascii=False,
+        )
+    )
 
 
 if __name__ == "__main__":
