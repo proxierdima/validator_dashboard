@@ -27,6 +27,7 @@ omniflixhub
 oraichain
 osmosis
 persistence
+provenance
 quicksilver
 secretnetwork
 shentu
