@@ -1,18 +1,6 @@
 {
-  "timestamp": "2026-03-09T22:42:22.559601+00:00",
+  "timestamp": "2026-03-10T02:02:15.794067+00:00",
   "rows": [
-    {
-      "network": "Stargaze",
-      "chain_id": "stargaze-1",
-      "rest_used": "https://rest.stargaze-apis.com/",
-      "valoper": "starsvaloper1jg39wazpukeqcytuuad7tsn3end22spg2m4u0x",
-      "denom": "ustars",
-      "display": "stars",
-      "amount": 63811.55549662844,
-      "cg_id": "stargaze",
-      "price": 0.00022252,
-      "total": 14.2
-    },
     {
       "network": "AtomOne",
       "chain_id": "atomone-1",
@@ -20,22 +8,22 @@
       "valoper": "atonevaloper1vcp7pkg8sk0n8ylhezxxs8qqrnwfld4dsv2sew",
       "denom": "uatone",
       "display": "atone",
-      "amount": 41.86828261137791,
+      "amount": 57.03696983604717,
       "cg_id": "atomone",
-      "price": 0.325695,
-      "total": 13.64
+      "price": 0.324464,
+      "total": 18.51
     },
     {
-      "network": "Osmosis",
-      "chain_id": "osmosis-1",
-      "rest_used": "https://lcd.osmosis.zone/",
-      "valoper": "osmovaloper1e8238v24qccht9mqc2w0r4luq462yxttfpaeam",
-      "denom": "uosmo",
-      "display": "osmo",
-      "amount": 312.1849272546782,
-      "cg_id": "osmosis",
-      "price": 0.03308052,
-      "total": 10.33
+      "network": "Stargaze",
+      "chain_id": "stargaze-1",
+      "rest_used": "https://rest.stargaze-apis.com/",
+      "valoper": "starsvaloper1jg39wazpukeqcytuuad7tsn3end22spg2m4u0x",
+      "denom": "ustars",
+      "display": "stars",
+      "amount": 63844.195234164516,
+      "cg_id": "stargaze",
+      "price": 0.00022321,
+      "total": 14.25
     },
     {
       "network": "Celestia",
@@ -44,10 +32,22 @@
       "valoper": "celestiavaloper1snun9qqk9eussvyhkqm03lz6f265ekhnnlw043",
       "denom": "utia",
       "display": "tia",
-      "amount": 27.727977396062197,
+      "amount": 37.80900227131207,
       "cg_id": "celestia",
-      "price": 0.325091,
-      "total": 9.01
+      "price": 0.326975,
+      "total": 12.36
+    },
+    {
+      "network": "Osmosis",
+      "chain_id": "osmosis-1",
+      "rest_used": "https://lcd.osmosis.zone/",
+      "valoper": "osmovaloper1e8238v24qccht9mqc2w0r4luq462yxttfpaeam",
+      "denom": "uosmo",
+      "display": "osmo",
+      "amount": 312.37430886957907,
+      "cg_id": "osmosis",
+      "price": 0.03312817,
+      "total": 10.35
     },
     {
       "network": "Shentu",
@@ -56,22 +56,10 @@
       "valoper": "shentuvaloper1qqrw7v5xcyxpp3f0gelp08td9q95ayfdugecw0",
       "denom": "uctk",
       "display": "ctk",
-      "amount": 42.301737876367504,
+      "amount": 48.62582512888588,
       "cg_id": "certik",
-      "price": 0.172959,
-      "total": 7.32
-    },
-    {
-      "network": "Warden",
-      "chain_id": "warden_8765-1",
-      "rest_used": "https://api.wardenprotocol.org",
-      "valoper": "wardenvaloper12de4mzezcvhauqxcszrhkdagwv8lwqs9uvla75",
-      "denom": "award",
-      "display": "ward",
-      "amount": 940.0598147941331,
-      "cg_id": "warden-2",
-      "price": 0.00719739,
-      "total": 6.77
+      "price": 0.176536,
+      "total": 8.58
     },
     {
       "network": "Bitway",
@@ -80,10 +68,22 @@
       "valoper": "bitwayvaloper1qqwp68scpqz3qrq3ru8p5rsuzsy3w9caqgqp2zchpqf32zsdqgt3znlg0ax",
       "denom": "ubtw",
       "display": "btw",
-      "amount": 254.42206603898777,
+      "amount": 290.51916457596576,
       "cg_id": null,
-      "price": 0.02628428,
-      "total": 6.69
+      "price": 0.02766727,
+      "total": 8.04
+    },
+    {
+      "network": "Warden",
+      "chain_id": "warden_8765-1",
+      "rest_used": "https://api.wardenprotocol.org",
+      "valoper": "wardenvaloper12de4mzezcvhauqxcszrhkdagwv8lwqs9uvla75",
+      "denom": "award",
+      "display": "ward",
+      "amount": 1075.4409188606273,
+      "cg_id": "warden-2",
+      "price": 0.00708161,
+      "total": 7.62
     },
     {
       "network": "Fetch.ai",
@@ -92,10 +92,10 @@
       "valoper": "fetchvaloper1y02hlwucl6csz4z02ksn46gzdkmref927l4mug",
       "denom": "afet",
       "display": "fet",
-      "amount": 41.174269499452095,
+      "amount": 49.12592880288606,
       "cg_id": "fetch-ai",
-      "price": 0.144239,
-      "total": 5.94
+      "price": 0.145127,
+      "total": 7.13
     },
     {
       "network": "Dungeon Chain",
@@ -104,10 +104,10 @@
       "valoper": "dungeonvaloper1umkse9yx2w9aw5qam0gffatfht3yerllxcque3",
       "denom": "udgn",
       "display": "DGN",
-      "amount": 23653.717741659584,
+      "amount": 23808.019350036822,
       "cg_id": "dragon-coin-2",
-      "price": 0.00018382,
-      "total": 4.35
+      "price": 0.00018555,
+      "total": 4.42
     },
     {
       "network": "FIRMACHAIN",
@@ -116,10 +116,10 @@
       "valoper": "firmavaloper143v9wpr870kt22gmtxgl7tc72twkd6z48h5yaj",
       "denom": "ufct",
       "display": "fct",
-      "amount": 311.38134708222447,
+      "amount": 355.5541621266082,
       "cg_id": "firmachain",
-      "price": 0.01220477,
-      "total": 3.8
+      "price": 0.01224752,
+      "total": 4.35
     },
     {
       "network": "Akash",
@@ -128,70 +128,10 @@
       "valoper": "akashvaloper1kudft84reamryp3yyg804202wmc070p9fm3fhk",
       "denom": "uakt",
       "display": "akt",
-      "amount": 4.211384945540794,
+      "amount": 4.694991506344775,
       "cg_id": "akash-network",
-      "price": 0.382095,
-      "total": 1.61
-    },
-    {
-      "network": "Humans.ai",
-      "chain_id": "humans_1089-1",
-      "rest_used": "https://api.humans.nodestake.org",
-      "valoper": "humanvaloper1ndnf0cd75nvz56feqy23um3mq22nlhe9ggu0uh",
-      "denom": "aheart",
-      "display": "heart",
-      "amount": 1629.648230635843,
-      "cg_id": "humans-ai",
-      "price": 0.00076942,
-      "total": 1.25
-    },
-    {
-      "network": "Stargaze",
-      "chain_id": "stargaze-1",
-      "rest_used": "https://rest.stargaze-apis.com/",
-      "valoper": "starsvaloper14ftwwcfvhnp3qvxawesjan5duh8rmrkrzdvquy",
-      "denom": "ustars",
-      "display": "stars",
-      "amount": 5598.703852896216,
-      "cg_id": "stargaze",
-      "price": 0.00022252,
-      "total": 1.25
-    },
-    {
-      "network": "Persistence",
-      "chain_id": "core-1",
-      "rest_used": "https://rest.core.persistence.one",
-      "valoper": "persistencevaloper10sc98vt6saux8asexnsp2hgvkgmjmful8w5cuw",
-      "denom": "uxprt",
-      "display": "xprt",
-      "amount": 99.4892741574731,
-      "cg_id": "persistence",
-      "price": 0.00851866,
-      "total": 0.85
-    },
-    {
-      "network": "Agoric",
-      "chain_id": "agoric-3",
-      "rest_used": "https://main.api.agoric.net:443",
-      "valoper": "agoricvaloper13yy5mk8ek8p5kk3e8nleucw003nt2vmzxrdx36",
-      "denom": "ubld",
-      "display": "bld",
-      "amount": 115.01723060112272,
-      "cg_id": "agoric",
-      "price": 0.00405049,
-      "total": 0.47
-    },
-    {
-      "network": "Oraichain",
-      "chain_id": "Oraichain",
-      "rest_used": "http://lcd.orai.io",
-      "valoper": "oraivaloper1gvk3caqtdnwhff60ndm29tp0m7p8e57zgx588h",
-      "denom": "orai",
-      "display": "ORAI",
-      "amount": 1.2407743127648099,
-      "cg_id": "oraichain-token",
-      "price": 0.344072,
-      "total": 0.43
+      "price": 0.377912,
+      "total": 1.77
     },
     {
       "network": "Cosmos Hub",
@@ -200,10 +140,70 @@
       "valoper": "cosmosvaloper157v7tczs40axfgejp2m43kwuzqe0wsy0rv8puv",
       "denom": "uatom",
       "display": "atom",
-      "amount": 0.16630476907284433,
+      "amount": 0.9631291295136218,
       "cg_id": "cosmos",
-      "price": 1.74,
-      "total": 0.29
+      "price": 1.75,
+      "total": 1.69
+    },
+    {
+      "network": "Humans.ai",
+      "chain_id": "humans_1089-1",
+      "rest_used": "https://api.humans.nodestake.org",
+      "valoper": "humanvaloper1ndnf0cd75nvz56feqy23um3mq22nlhe9ggu0uh",
+      "denom": "aheart",
+      "display": "heart",
+      "amount": 1861.133266050004,
+      "cg_id": "humans-ai",
+      "price": 0.0007552,
+      "total": 1.41
+    },
+    {
+      "network": "Stargaze",
+      "chain_id": "stargaze-1",
+      "rest_used": "https://rest.stargaze-apis.com/",
+      "valoper": "starsvaloper14ftwwcfvhnp3qvxawesjan5duh8rmrkrzdvquy",
+      "denom": "ustars",
+      "display": "stars",
+      "amount": 5683.199207875019,
+      "cg_id": "stargaze",
+      "price": 0.00022321,
+      "total": 1.27
+    },
+    {
+      "network": "Persistence",
+      "chain_id": "core-1",
+      "rest_used": "https://rest.core.persistence.one",
+      "valoper": "persistencevaloper10sc98vt6saux8asexnsp2hgvkgmjmful8w5cuw",
+      "denom": "uxprt",
+      "display": "xprt",
+      "amount": 113.5614099486475,
+      "cg_id": "persistence",
+      "price": 0.00848729,
+      "total": 0.96
+    },
+    {
+      "network": "Agoric",
+      "chain_id": "agoric-3",
+      "rest_used": "https://main.api.agoric.net:443",
+      "valoper": "agoricvaloper13yy5mk8ek8p5kk3e8nleucw003nt2vmzxrdx36",
+      "denom": "ubld",
+      "display": "bld",
+      "amount": 131.38303865587216,
+      "cg_id": "agoric",
+      "price": 0.00404808,
+      "total": 0.53
+    },
+    {
+      "network": "Oraichain",
+      "chain_id": "Oraichain",
+      "rest_used": "http://lcd.orai.io",
+      "valoper": "oraivaloper1gvk3caqtdnwhff60ndm29tp0m7p8e57zgx588h",
+      "denom": "orai",
+      "display": "ORAI",
+      "amount": 1.424820999804788,
+      "cg_id": "oraichain-token",
+      "price": 0.345244,
+      "total": 0.49
     },
     {
       "network": "Juno",
@@ -212,10 +212,10 @@
       "valoper": "junovaloper1e8238v24qccht9mqc2w0r4luq462yxttjzn7qt",
       "denom": "ujuno",
       "display": "juno",
-      "amount": 10.488057665255806,
+      "amount": 17.90509709618053,
       "cg_id": "juno-network",
-      "price": 0.02471219,
-      "total": 0.26
+      "price": 0.02552819,
+      "total": 0.46
     },
     {
       "network": "Nolus",
@@ -224,10 +224,10 @@
       "valoper": "nolusvaloper108wunsvlzm7l6pf456ntw9e84gp3zkv23mydme",
       "denom": "unls",
       "display": "nls",
-      "amount": 56.07553017620387,
+      "amount": 64.15344824034204,
       "cg_id": "nolus",
-      "price": 0.00417002,
-      "total": 0.23
+      "price": 0.00417193,
+      "total": 0.27
     },
     {
       "network": "Aura Network",
@@ -236,10 +236,10 @@
       "valoper": "auravaloper15pzl0s6ym85qx4yeq29rflp702wtx3dntle05a",
       "denom": "uaura",
       "display": "aura",
-      "amount": 145.98132981944804,
+      "amount": 166.45265025836295,
       "cg_id": "aura-network",
-      "price": 0.00104579,
-      "total": 0.15
+      "price": 0.0010448,
+      "total": 0.17
     },
     {
       "network": "Aura Network",
@@ -248,10 +248,10 @@
       "valoper": "auravaloper15pzl0s6ym85qx4yeq29rflp702wtx3dntle05a",
       "denom": "uaura",
       "display": "aura",
-      "amount": 145.98132981944804,
+      "amount": 166.45265025836295,
       "cg_id": "aura-network",
-      "price": 0.00104579,
-      "total": 0.15
+      "price": 0.0010448,
+      "total": 0.17
     },
     {
       "network": "BeeZee",
@@ -260,10 +260,10 @@
       "valoper": "bzevaloper1xq38qxad2eumdaytrejnmypqaay8dtmukz72re",
       "denom": "ubze",
       "display": "bze",
-      "amount": 161.5852508472999,
+      "amount": 184.40413939047514,
       "cg_id": "bzedge",
-      "price": 0.00075267,
-      "total": 0.12
+      "price": 0.00075119,
+      "total": 0.14
     },
     {
       "network": "Babylon Genesis",
@@ -272,10 +272,10 @@
       "valoper": "bbnvaloper1q3m4m0zmrhkw7zdldehcu8raxsmdpxp0npp52s",
       "denom": "ubbn",
       "display": "BABY",
-      "amount": 5.582216712135763,
+      "amount": 5.9731392686595255,
       "cg_id": "babylon",
-      "price": 0.0160219,
-      "total": 0.09
+      "price": 0.01637495,
+      "total": 0.1
     },
     {
       "network": "Dymension Hub",
@@ -284,10 +284,10 @@
       "valoper": "dymvaloper1lsjs7pwll7pqm40namkyx3e5qdwg0v0swrshud",
       "denom": "adym",
       "display": "dym",
-      "amount": 1.3639063406056389,
+      "amount": 1.9542977544023985,
       "cg_id": "dymension",
-      "price": 0.03563274,
-      "total": 0.05
+      "price": 0.03563799,
+      "total": 0.07
     },
     {
       "network": "Lava",
@@ -296,9 +296,9 @@
       "valoper": "lava@valoper1kwk34225f9eq3sklaf7xws8mc9lhu6sxhh57pj",
       "denom": "ulava",
       "display": "lava",
-      "amount": 1.2961799473631768,
+      "amount": 1.388581901594259,
       "cg_id": "lava-network",
-      "price": 0.03754489,
+      "price": 0.03761115,
       "total": 0.05
     },
     {
@@ -308,10 +308,34 @@
       "valoper": "zetavaloper1mj5uvv4703fwvna0t622yj9386cfwavr2hl6q4",
       "denom": "azeta",
       "display": "zeta",
-      "amount": 0.5134463594319514,
+      "amount": 0.5898633528937992,
       "cg_id": "zetachain",
-      "price": 0.04929063,
+      "price": 0.050006,
       "total": 0.03
+    },
+    {
+      "network": "Bitway",
+      "chain_id": "bitway-1",
+      "rest_used": "https://rest.bitway.com",
+      "valoper": "bitwayvaloper1qqwp68scpqz3qrq3ru8p5rsuzsy3w9caqgqp2zchpqf32zsdqgt3znlg0ax",
+      "denom": "sat",
+      "display": "BTCT",
+      "amount": 2.3136341240869e-09,
+      "cg_id": null,
+      "price": 69229,
+      "total": 0.0
+    },
+    {
+      "network": "AtomOne",
+      "chain_id": "atomone-1",
+      "rest_used": "https://atomone-api.allinbits.com",
+      "valoper": "atonevaloper1vcp7pkg8sk0n8ylhezxxs8qqrnwfld4dsv2sew",
+      "denom": "uphoton",
+      "display": "photon",
+      "amount": 0.08560590936904035,
+      "cg_id": "photon-2",
+      "price": 0.04546153,
+      "total": 0.0
     },
     {
       "network": "Fetch.ai",
@@ -326,37 +350,13 @@
       "total": 0.0
     },
     {
-      "network": "Bitway",
-      "chain_id": "bitway-1",
-      "rest_used": "https://rest.bitway.com",
-      "valoper": "bitwayvaloper1qqwp68scpqz3qrq3ru8p5rsuzsy3w9caqgqp2zchpqf32zsdqgt3znlg0ax",
-      "denom": "sat",
-      "display": "BTCT",
-      "amount": 2.3136341240869e-09,
-      "cg_id": null,
-      "price": 68976,
-      "total": 0.0
-    },
-    {
-      "network": "Axelar",
-      "chain_id": "axelar-dojo-1",
-      "rest_used": "https://lcd-axelar.imperator.co:443",
-      "valoper": "axelarvaloper1ftqma496np33y054x6gjeh2maxy00e00p2nl9l",
-      "denom": "uaxl",
-      "display": "axl",
-      "amount": 9.91085898941245e-07,
-      "cg_id": "axelar",
-      "price": 0.053307,
-      "total": 0.0
-    },
-    {
       "network": "Elys Network",
       "chain_id": "elys-1",
       "rest_used": "https://api.elys.network",
       "valoper": "elysvaloper1w6phv0xwya5p2sql4qzlh7h2hdeszf49d9t2gr",
       "denom": "ibc/F082B65C88E4B6D5EF1DB243CDA1D331D002759E938A0F5CD3FFDC5D53B3E349",
       "display": "usdc",
-      "amount": 0.00018807281798538774,
+      "amount": 0.0002494691077770612,
       "cg_id": "usd-coin",
       "price": 1.0,
       "total": 0.0
@@ -370,7 +370,7 @@
       "display": "eden",
       "amount": 5.052662411757114e-07,
       "cg_id": null,
-      "price": 0.03738437,
+      "price": 0.03695975,
       "total": 0.0
     },
     {
@@ -380,21 +380,9 @@
       "valoper": "elysvaloper1w6phv0xwya5p2sql4qzlh7h2hdeszf49d9t2gr",
       "denom": "uedenb",
       "display": "edenb",
-      "amount": 49.24130114856205,
+      "amount": 56.461729624254545,
       "cg_id": null,
       "price": 0,
-      "total": 0.0
-    },
-    {
-      "network": "AtomOne",
-      "chain_id": "atomone-1",
-      "rest_used": "https://atomone-api.allinbits.com",
-      "valoper": "atonevaloper1vcp7pkg8sk0n8ylhezxxs8qqrnwfld4dsv2sew",
-      "denom": "uphoton",
-      "display": "photon",
-      "amount": 0.0599294128894762,
-      "cg_id": "photon-2",
-      "price": 0.04574787,
       "total": 0.0
     },
     {
@@ -406,7 +394,7 @@
       "display": "kyve",
       "amount": 6.222809315148019e-07,
       "cg_id": "kyve-network",
-      "price": 0.00185124,
+      "price": 0.00177025,
       "total": 0.0
     },
     {
@@ -416,7 +404,19 @@
       "valoper": "lmnvaloper1m574sszvqxqpxwyf7huqdft54gu2897hprtder",
       "denom": "ulmn",
       "display": "lmn",
-      "amount": 0.046982552329778104,
+      "amount": 0.006714315187599508,
+      "cg_id": null,
+      "price": 0,
+      "total": 0.0
+    },
+    {
+      "network": "Intento",
+      "chain_id": "intento-1",
+      "rest_used": "https://lcd-mainnet.intento.zone",
+      "valoper": "intovaloper1a6qyup7zgyj53r43tq2ngqrrvx70fqhycucrmn",
+      "denom": "uinto",
+      "display": "into",
+      "amount": 2566.061752896969,
       "cg_id": null,
       "price": 0,
       "total": 0.0
@@ -443,30 +443,6 @@
       "amount": 2.0800228112554153e-07,
       "cg_id": "usd-coin",
       "price": 1.0,
-      "total": 0.0
-    },
-    {
-      "network": "Intento",
-      "chain_id": "intento-1",
-      "rest_used": "https://lcd-mainnet.intento.zone",
-      "valoper": "intovaloper1a6qyup7zgyj53r43tq2ngqrrvx70fqhycucrmn",
-      "denom": "uinto",
-      "display": "into",
-      "amount": 2566.061752896969,
-      "cg_id": null,
-      "price": 0,
-      "total": 0.0
-    },
-    {
-      "network": "Osmosis",
-      "chain_id": "osmosis-1",
-      "rest_used": "https://lcd.osmosis.zone/",
-      "valoper": "osmovaloper1e8238v24qccht9mqc2w0r4luq462yxttfpaeam",
-      "denom": "uion",
-      "display": "ion",
-      "amount": 4.936075917324894e-07,
-      "cg_id": "ion",
-      "price": 28.97,
       "total": 0.0
     },
     {
@@ -518,27 +494,27 @@
       "total": 0.0
     },
     {
+      "network": "Osmosis",
+      "chain_id": "osmosis-1",
+      "rest_used": "https://lcd.osmosis.zone/",
+      "valoper": "osmovaloper1e8238v24qccht9mqc2w0r4luq462yxttfpaeam",
+      "denom": "uion",
+      "display": "ion",
+      "amount": 4.936075917324894e-07,
+      "cg_id": "ion",
+      "price": 29.0,
+      "total": 0.0
+    },
+    {
       "network": "Axone",
       "chain_id": "axone-1",
       "rest_used": "https://api.axone.cumulo.com.es",
       "valoper": "axonevaloper1ydnn9wtnlmw99zr66s6p9k7pg48zgjewk4pw53",
       "denom": "uaxone",
       "display": "axone",
-      "amount": 83.94061066416974,
+      "amount": 96.33078200297103,
       "cg_id": null,
       "price": 0,
-      "total": 0.0
-    },
-    {
-      "network": "Union",
-      "chain_id": "union-1",
-      "rest_used": "https://api-1.union.nodes.guru",
-      "valoper": "unionvaloper1pv6tkf95cwzxr0dynqv0h52zdk3x0q4ser5shs",
-      "denom": "au",
-      "display": "U",
-      "amount": 1.7927310005514216,
-      "cg_id": "union-2",
-      "price": 0.00090711,
       "total": 0.0
     },
     {
@@ -548,7 +524,7 @@
       "valoper": "sunrisevaloper1a5t392uyw8x0dmul48lfrt6n7emvmzt0svc82e",
       "denom": "urise",
       "display": "rise",
-      "amount": 121.07004835629358,
+      "amount": 129.78429370282208,
       "cg_id": null,
       "price": 0,
       "total": 0.0
@@ -560,45 +536,56 @@
       "valoper": "sunrisevaloper1a5t392uyw8x0dmul48lfrt6n7emvmzt0svc82e",
       "denom": "uusdrise",
       "display": "usdrise",
-      "amount": 0.0038916130502921796,
+      "amount": 0.003917746369537699,
       "cg_id": null,
       "price": 0,
+      "total": 0.0
+    },
+    {
+      "network": "Union",
+      "chain_id": "union-1",
+      "rest_used": "https://api-1.union.nodes.guru",
+      "valoper": "unionvaloper1pv6tkf95cwzxr0dynqv0h52zdk3x0q4ser5shs",
+      "denom": "au",
+      "display": "U",
+      "amount": 2.048042154779393,
+      "cg_id": "union-2",
+      "price": 0.0009054,
       "total": 0.0
     }
   ],
   "totals_by_network": {
-    "Stargaze": 15.45,
-    "AtomOne": 13.64,
-    "Osmosis": 10.33,
-    "Celestia": 9.01,
-    "Shentu": 7.32,
-    "Warden": 6.77,
-    "Bitway": 6.69,
-    "Fetch.ai": 5.94,
-    "Dungeon Chain": 4.35,
-    "FIRMACHAIN": 3.8,
-    "Akash": 1.61,
-    "Humans.ai": 1.25,
-    "Persistence": 0.85,
-    "Agoric": 0.47,
-    "Oraichain": 0.43,
-    "Aura Network": 0.3,
-    "Cosmos Hub": 0.29,
-    "Juno": 0.26,
-    "Nolus": 0.23,
-    "BeeZee": 0.12,
-    "Babylon Genesis": 0.09,
-    "Dymension Hub": 0.05,
+    "AtomOne": 18.51,
+    "Stargaze": 15.52,
+    "Celestia": 12.36,
+    "Osmosis": 10.35,
+    "Shentu": 8.58,
+    "Bitway": 8.04,
+    "Warden": 7.62,
+    "Fetch.ai": 7.13,
+    "Dungeon Chain": 4.42,
+    "FIRMACHAIN": 4.35,
+    "Akash": 1.77,
+    "Cosmos Hub": 1.69,
+    "Humans.ai": 1.41,
+    "Persistence": 0.96,
+    "Agoric": 0.53,
+    "Oraichain": 0.49,
+    "Juno": 0.46,
+    "Aura Network": 0.34,
+    "Nolus": 0.27,
+    "BeeZee": 0.14,
+    "Babylon Genesis": 0.1,
+    "Dymension Hub": 0.07,
     "Lava": 0.05,
     "ZetaChain": 0.03,
-    "Axelar": 0.0,
     "Elys Network": 0.0,
     "KYVE": 0.0,
     "Lumen": 0.0,
     "Intento": 0.0,
     "Axone": 0.0,
-    "Union": 0.0,
-    "Sunrise": 0.0
+    "Sunrise": 0.0,
+    "Union": 0.0
   },
-  "grand_total": 89.33
+  "grand_total": 105.19
 }

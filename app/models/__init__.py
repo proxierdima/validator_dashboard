@@ -9,6 +9,7 @@ from app.models.network_status import NetworkStatusCurrent
 from app.models.public_rpc import PublicRpcEndpoint, PublicRpcCheck
 from app.models.tracked_network import TrackedNetwork
 from app.models.network_asset import NetworkAsset
+from app.models.governance import GovernanceProposal
 
 __all__ = [
     "Base",
@@ -27,4 +28,5 @@ __all__ = [
     "PublicRpcCheck",
     "TrackedNetwork",
     "NetworkAsset",
+    "GovernanceProposal",
 ]

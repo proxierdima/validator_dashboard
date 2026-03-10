@@ -1,5 +1,12 @@
 [
   {
+    "network": "Axelar",
+    "chain_id": "axelar-dojo-1",
+    "valoper": "axelarvaloper1ftqma496np33y054x6gjeh2maxy00e00p2nl9l",
+    "rest": "https://lcd-axelar.imperator.co:443",
+    "reason": "commission_query_failed"
+  },
+  {
     "network": "Secret Network",
     "chain_id": "secret-4",
     "valoper": "secretvaloper1f8chr3y3s9h8g4vc5pg8wvzzhfy3hcxm0re5zc",
