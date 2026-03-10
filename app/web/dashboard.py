@@ -354,6 +354,34 @@ def get_public_rpc_rows(conn):
     ).fetchall()
     return rows
 
+@router.get("/dashboard/proposals")
+def dashboard_proposals(request: Request):
+
+    conn = db_connect()
+
+    rows = conn.execute(
+        """
+        SELECT
+            n.name AS network,
+            gp.proposal_id,
+            gp.title,
+            gp.status,
+            gp.voting_end_time
+        FROM governance_proposals gp
+        JOIN networks n ON n.id = gp.network_id
+        ORDER BY gp.voting_end_time ASC
+        """
+    ).fetchall()
+
+    conn.close()
+
+    return TEMPLATES.TemplateResponse(
+        "proposals.html",
+        {
+            "request": request,
+            "rows": rows,
+        },
+    )
 
 @router.get("/dashboard")
 def dashboard(request: Request):
