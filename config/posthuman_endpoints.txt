@@ -46,11 +46,9 @@ chain_id: stargaze-1
 chain_id: mocha-4 
  valoper_address: celestiavaloper1sa5mgyskjzpx6znnd6jxkn59g02hm6c4p8a59v 
  - url: https://rpc-celestia-testnet.posthuman.digital:443 
- - url: https://rpc-celestia-testnet-archive.posthuman.digital:443 
  chain_id: celestia 
  valoper_address: celestiavaloper1snun9qqk9eussvyhkqm03lz6f265ekhnnlw043 
  - url: http://173.208.0.15:26657 
- - url: https://celestia-mainnet-rpc.itrocket.net:443 
  chain_id: atomone-1 
  valoper_address: atonevaloper1vcp7pkg8sk0n8ylhezxxs8qqrnwfld4dsv2sew 
  - url: http://51.161.172.90:41657 
