@@ -46,6 +46,37 @@ def format_utc(ts: str | None) -> str:
         return ts
 
 
+def to_int_safe(value):
+    if value in (None, ""):
+        return 0
+    try:
+        return int(value)
+    except Exception:
+        try:
+            return int(float(value))
+        except Exception:
+            return 0
+
+
+def get_majority_vote_label(yes_votes, no_votes, abstain_votes, no_with_veto_votes):
+    votes = {
+        "YES": to_int_safe(yes_votes),
+        "NO": to_int_safe(no_votes),
+        "ABSTAIN": to_int_safe(abstain_votes),
+        "NO_WITH_VETO": to_int_safe(no_with_veto_votes),
+    }
+
+    max_value = max(votes.values()) if votes else 0
+    if max_value <= 0:
+        return "—"
+
+    leaders = [k for k, v in votes.items() if v == max_value]
+    if len(leaders) == 1:
+        return leaders[0]
+
+    return " / ".join(leaders)
+
+
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -354,9 +385,9 @@ def get_public_rpc_rows(conn):
     ).fetchall()
     return rows
 
+
 @router.get("/dashboard/proposals")
 def dashboard_proposals(request: Request):
-
     conn = db_connect()
 
     rows = conn.execute(
@@ -366,12 +397,45 @@ def dashboard_proposals(request: Request):
             gp.proposal_id,
             gp.title,
             gp.status,
-            gp.voting_end_time
+            gp.voting_end_time,
+            gp.yes_votes,
+            gp.no_votes,
+            gp.abstain_votes,
+            gp.no_with_veto_votes,
+            gp.validator_voted,
+            gp.validator_vote_option
         FROM governance_proposals gp
         JOIN networks n ON n.id = gp.network_id
-        ORDER BY gp.voting_end_time ASC
+        WHERE COALESCE(gp.is_latest, 1) = 1
+        ORDER BY gp.voting_end_time ASC, n.name ASC, gp.proposal_id ASC
         """
     ).fetchall()
+
+    result = []
+    for row in rows:
+        item = dict(row)
+
+        validator_voted = 0
+        try:
+            validator_voted = int(item.get("validator_voted") or 0)
+        except Exception:
+            validator_voted = 0
+
+        if validator_voted == 1:
+            item["our_vote"] = item.get("validator_vote_option") or "VOTED"
+            item["our_vote_class"] = "ok"
+        else:
+            item["our_vote"] = "warning"
+            item["our_vote_class"] = "warning"
+
+        item["majority_vote"] = get_majority_vote_label(
+            item.get("yes_votes"),
+            item.get("no_votes"),
+            item.get("abstain_votes"),
+            item.get("no_with_veto_votes"),
+        )
+
+        result.append(item)
 
     conn.close()
 
@@ -379,9 +443,10 @@ def dashboard_proposals(request: Request):
         "proposals.html",
         {
             "request": request,
-            "rows": rows,
+            "rows": result,
         },
     )
+
 
 @router.get("/dashboard")
 def dashboard(request: Request):

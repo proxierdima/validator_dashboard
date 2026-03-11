@@ -4,37 +4,43 @@
 
 <div class="panel">
 
-<div class="panel-title">Active Governance Proposals</div>
+  <div class="panel-title">Active Governance Proposals</div>
 
-<table>
+  <table>
+    <thead>
+      <tr>
+        <th>Network</th>
+        <th>ID</th>
+        <th>Title</th>
+        <th>Status</th>
+        <th>Our vote</th>
+        <th>Majority</th>
+        <th>Voting ends</th>
+      </tr>
+    </thead>
 
-<thead>
-<tr>
-<th>Network</th>
-<th>ID</th>
-<th>Title</th>
-<th>Status</th>
-<th>Voting ends</th>
-</tr>
-</thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td>{{ r.network }}</td>
+        <td>#{{ r.proposal_id }}</td>
+        <td>{{ r.title }}</td>
+        <td>{{ r.status }}</td>
 
-<tbody>
+        <td>
+          {% if r.our_vote_class == "warning" %}
+            <span style="color:#d97706; font-weight:600;">{{ r.our_vote }}</span>
+          {% else %}
+            <span style="color:#16a34a; font-weight:600;">{{ r.our_vote }}</span>
+          {% endif %}
+        </td>
 
-{% for r in rows %}
-
-<tr>
-<td>{{ r.network }}</td>
-<td>#{{ r.proposal_id }}</td>
-<td>{{ r.title }}</td>
-<td>{{ r.status }}</td>
-<td>{{ r.voting_end_time }}</td>
-</tr>
-
-{% endfor %}
-
-</tbody>
-
-</table>
+        <td>{{ r.majority_vote }}</td>
+        <td>{{ r.voting_end_time }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 
 </div>
 

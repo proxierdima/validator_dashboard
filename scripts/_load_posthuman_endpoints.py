@@ -42,28 +42,6 @@ def normalize_valoper(valoper: str | None) -> str | None:
     return v or None
 
 
-def valoper_to_delegator_address(operator_address: str | None) -> str | None:
-    """
-    Преобразует:
-      cosmosvaloper1... -> cosmos1...
-      osmovaloper1...   -> osmo1...
-    """
-    if not operator_address:
-        return None
-
-    value = operator_address.strip()
-    if "valoper1" not in value:
-        return None
-
-    try:
-        prefix, suffix = value.split("valoper1", 1)
-        if not prefix or not suffix:
-            return None
-        return f"{prefix}1{suffix}"
-    except Exception:
-        return None
-
-
 def parse_source(text: str) -> list[dict]:
     items = []
     current = None
@@ -194,7 +172,6 @@ def main() -> None:
         updated_validators = 0
         added_validator_eps = 0
         updated_validator_eps = 0
-        filled_delegator_addresses = 0
 
         skipped_missing_valoper = []
         skipped_networks = []
@@ -229,8 +206,6 @@ def main() -> None:
                 skipped_no_validator_urls.append((chain_id, valoper))
                 continue
 
-            delegator_address = valoper_to_delegator_address(valoper)
-
             validator = get_first_validator(db, network.id, valoper)
 
             if validator is None:
@@ -238,7 +213,6 @@ def main() -> None:
                     network_id=network.id,
                     moniker="PostHuman",
                     operator_address=valoper,
-                    delegator_address=delegator_address,
                     consensus_address=None,
                     is_main=1,
                     is_enabled=1,
@@ -248,17 +222,10 @@ def main() -> None:
                 db.add(validator)
                 db.flush()
                 created_validators += 1
-                if delegator_address:
-                    filled_delegator_addresses += 1
             else:
                 validator.moniker = validator.moniker or "PostHuman"
                 validator.is_main = 1
                 validator.is_enabled = 1
-
-                if delegator_address and not getattr(validator, "delegator_address", None):
-                    validator.delegator_address = delegator_address
-                    filled_delegator_addresses += 1
-
                 validator.updated_at = now
                 db.flush()
                 updated_validators += 1
@@ -294,7 +261,6 @@ def main() -> None:
 
         print(f"Created validators: {created_validators}")
         print(f"Updated validators: {updated_validators}")
-        print(f"Filled delegator addresses: {filled_delegator_addresses}")
         print(f"Added validator RPC endpoints: {added_validator_eps}")
         print(f"Updated validator RPC endpoints: {updated_validator_eps}")
 

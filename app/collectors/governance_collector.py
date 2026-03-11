@@ -12,12 +12,25 @@ from app.models import Network, TrackedNetwork, Validator
 TIMEOUT = 12
 
 # Cosmos SDK gov v1
-GOV_PATH = "/cosmos/gov/v1/proposals"
+GOV_PROPOSALS_PATH = "/cosmos/gov/v1/proposals"
+GOV_TALLY_PATH = "/cosmos/gov/v1/proposals/{proposal_id}/tally"
+GOV_VOTE_PATH = "/cosmos/gov/v1/proposals/{proposal_id}/votes/{voter}"
+
 ACTIVE_STATUS = "PROPOSAL_STATUS_VOTING_PERIOD"
 
 
-def utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+def now_fmt() -> str:
+    return datetime.now(timezone.utc).strftime("%H:%M %Y-%m-%d")
+
+
+def format_dt(value: str | None) -> str | None:
+    if not value:
+        return None
+    try:
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return dt.astimezone(timezone.utc).strftime("%H:%M %Y-%m-%d")
+    except Exception:
+        return value
 
 
 def normalize_url(url: str | None) -> str | None:
@@ -32,7 +45,7 @@ def fetch_active_proposals(rest_url: str) -> list[dict]:
     """
     try:
         r = requests.get(
-            normalize_url(rest_url) + GOV_PATH,
+            normalize_url(rest_url) + GOV_PROPOSALS_PATH,
             params={"proposal_status": ACTIVE_STATUS},
             timeout=TIMEOUT,
         )
@@ -43,6 +56,95 @@ def fetch_active_proposals(rest_url: str) -> list[dict]:
         return []
 
 
+def fetch_proposal_tally(rest_url: str, proposal_id: int) -> dict:
+    """
+    Берем текущее tally по proposal.
+    """
+    try:
+        r = requests.get(
+            normalize_url(rest_url) + GOV_TALLY_PATH.format(proposal_id=proposal_id),
+            timeout=TIMEOUT,
+        )
+        r.raise_for_status()
+        data = r.json()
+        tally = data.get("tally") or data.get("final_tally_result") or {}
+        return {
+            "yes_votes": tally.get("yes_count"),
+            "no_votes": tally.get("no_count"),
+            "abstain_votes": tally.get("abstain_count"),
+            "no_with_veto_votes": tally.get("no_with_veto_count"),
+        }
+    except Exception:
+        return {
+            "yes_votes": None,
+            "no_votes": None,
+            "abstain_votes": None,
+            "no_with_veto_votes": None,
+        }
+
+
+def normalize_vote_option(option: str | None) -> str | None:
+    if not option:
+        return None
+    option = str(option).strip()
+    prefix = "VOTE_OPTION_"
+    if option.startswith(prefix):
+        option = option[len(prefix):]
+    return option
+
+
+def fetch_validator_vote(
+    rest_url: str,
+    proposal_id: int,
+    voter_address: str | None,
+) -> tuple[int, str | None]:
+    """
+    Возвращает:
+      validator_voted: 0/1
+      validator_vote_option: YES / NO / ABSTAIN / NO_WITH_VETO
+                              или weighted: YES:0.700000,NO:0.300000
+    Используем operator_address, как ты просил.
+    """
+    if not voter_address:
+        return 0, None
+
+    try:
+        r = requests.get(
+            normalize_url(rest_url)
+            + GOV_VOTE_PATH.format(proposal_id=proposal_id, voter=voter_address),
+            timeout=TIMEOUT,
+        )
+
+        if r.status_code == 404:
+            return 0, None
+
+        r.raise_for_status()
+        data = r.json()
+        vote = data.get("vote") or {}
+
+        options = vote.get("options") or []
+        if options:
+            parts = []
+            for item in options:
+                opt = normalize_vote_option(item.get("option"))
+                weight = item.get("weight")
+                if opt and weight:
+                    parts.append(f"{opt}:{weight}")
+                elif opt:
+                    parts.append(opt)
+            if parts:
+                return 1, ",".join(parts)
+
+        single_option = normalize_vote_option(vote.get("option"))
+        if single_option:
+            return 1, single_option
+
+        return 1, "UNKNOWN"
+
+    except Exception:
+        return 0, None
+
+
 def build_network_list(db):
     """
     Берем только сети, где:
@@ -50,9 +152,11 @@ def build_network_list(db):
     - use_for_validator_search enabled
     - network enabled
     - есть основной активный validator
+
+    Для проверки голоса используем operator_address.
     """
     rows = db.execute(
-        select(Network)
+        select(Network, Validator)
         .join(TrackedNetwork, TrackedNetwork.network_id == Network.id)
         .join(
             Validator,
@@ -64,12 +168,12 @@ def build_network_list(db):
         .where(TrackedNetwork.use_for_validator_search == 1)
         .where(Network.is_enabled == 1)
         .order_by(Network.name.asc())
-    ).scalars().all()
+    ).all()
 
     result = []
     seen = set()
 
-    for network in rows:
+    for network, validator in rows:
         if network.id in seen:
             continue
         seen.add(network.id)
@@ -77,7 +181,15 @@ def build_network_list(db):
         if not getattr(network, "rest", None):
             continue
 
-        result.append(network)
+        voter_address = getattr(validator, "operator_address", None)
+
+        result.append(
+            {
+                "network": network,
+                "validator": validator,
+                "voter_address": voter_address,
+            }
+        )
 
     return result
 
@@ -85,7 +197,6 @@ def build_network_list(db):
 def extract_title(proposal: dict) -> str:
     """
     В gov v1 title может лежать в metadata или messages.
-    Пытаемся вытащить максимально читабельно.
     """
     metadata = proposal.get("metadata")
     if metadata:
@@ -99,7 +210,6 @@ def extract_title(proposal: dict) -> str:
             pass
 
         if isinstance(metadata, str) and metadata.strip():
-            # если metadata не JSON, но строка полезная
             return metadata.strip()[:300]
 
     title = proposal.get("title")
@@ -137,7 +247,7 @@ def extract_description(proposal: dict) -> str | None:
     return None
 
 
-def extract_final_tally(proposal: dict) -> dict:
+def extract_tally_from_proposal(proposal: dict) -> dict:
     tally = proposal.get("final_tally_result") or {}
     return {
         "yes_votes": tally.get("yes_count"),
@@ -151,19 +261,24 @@ def main() -> None:
     db = SessionLocal()
 
     try:
-        networks = build_network_list(db)
-        print(f"Networks to check: {len(networks)}")
+        items = build_network_list(db)
+        print(f"Networks to check: {len(items)}")
 
         total_inserted = 0
 
-        for network in networks:
+        for item in items:
+            network = item["network"]
+            voter_address = item["voter_address"]
+
             proposals = fetch_active_proposals(network.rest)
 
-            # Удаляем старые активные proposals этой сети и вставляем текущий снимок заново
+            # Историю НЕ удаляем.
+            # Просто снимаем флаг latest у старых снимков этой сети.
             db.execute(
                 text(
                     """
-                    DELETE FROM governance_proposals
+                    UPDATE governance_proposals
+                    SET is_latest = 0
                     WHERE network_id = :network_id
                     """
                 ),
@@ -185,10 +300,21 @@ def main() -> None:
                 title = extract_title(proposal)
                 description = extract_description(proposal)
                 status = proposal.get("status")
-                voting_start_time = proposal.get("voting_start_time")
-                voting_end_time = proposal.get("voting_end_time")
-                tally = extract_final_tally(proposal)
-                now = utc_now_iso()
+
+                voting_start_time = format_dt(proposal.get("voting_start_time"))
+                voting_end_time = format_dt(proposal.get("voting_end_time"))
+
+                tally = fetch_proposal_tally(network.rest, proposal_id)
+                if not any(tally.values()):
+                    tally = extract_tally_from_proposal(proposal)
+
+                validator_voted, validator_vote_option = fetch_validator_vote(
+                    network.rest,
+                    proposal_id,
+                    voter_address,
+                )
+
+                snapshot_at = now_fmt()
 
                 db.execute(
                     text(
@@ -205,7 +331,12 @@ def main() -> None:
                             no_votes,
                             abstain_votes,
                             no_with_veto_votes,
-                            last_updated_at
+                            validator_voter_address,
+                            validator_voted,
+                            validator_vote_option,
+                            snapshot_at,
+                            last_updated_at,
+                            is_latest
                         )
                         VALUES (
                             :network_id,
@@ -219,7 +350,12 @@ def main() -> None:
                             :no_votes,
                             :abstain_votes,
                             :no_with_veto_votes,
-                            :last_updated_at
+                            :validator_voter_address,
+                            :validator_voted,
+                            :validator_vote_option,
+                            :snapshot_at,
+                            :last_updated_at,
+                            1
                         )
                         """
                     ),
@@ -235,7 +371,11 @@ def main() -> None:
                         "no_votes": tally["no_votes"],
                         "abstain_votes": tally["abstain_votes"],
                         "no_with_veto_votes": tally["no_with_veto_votes"],
-                        "last_updated_at": now,
+                        "validator_voter_address": voter_address,
+                        "validator_voted": validator_voted,
+                        "validator_vote_option": validator_vote_option,
+                        "snapshot_at": snapshot_at,
+                        "last_updated_at": snapshot_at,
                     },
                 )
 

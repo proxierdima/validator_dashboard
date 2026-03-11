@@ -1,12 +1,5 @@
 [
   {
-    "network": "Axelar",
-    "chain_id": "axelar-dojo-1",
-    "valoper": "axelarvaloper1ftqma496np33y054x6gjeh2maxy00e00p2nl9l",
-    "rest": "https://lcd-axelar.imperator.co:443",
-    "reason": "commission_query_failed"
-  },
-  {
     "network": "Secret Network",
     "chain_id": "secret-4",
     "valoper": "secretvaloper1f8chr3y3s9h8g4vc5pg8wvzzhfy3hcxm0re5zc",
@@ -14,17 +7,24 @@
     "reason": "no_public_rest"
   },
   {
-    "network": "Neutron",
-    "chain_id": "neutron-1",
-    "valoper": "neutronvaloper1md0k6m8y58w8u98x82kjah7r5zcajw7c5v5ypa",
-    "rest": "https://rest-lb.neutron.org",
+    "network": "Lava",
+    "chain_id": "lava-mainnet-1",
+    "valoper": "lavavaloper1kwk34225f9eq3sklaf7xws8mc9lhu6sxhh57pj",
+    "rest": "https://lava.api.liveraven.net",
     "reason": "commission_query_failed"
   },
   {
     "network": "Lava",
     "chain_id": "lava-mainnet-1",
-    "valoper": "lavavaloper1kwk34225f9eq3sklaf7xws8mc9lhu6sxhh57pj",
+    "valoper": "lava@valoper1kwk34225f9eq3sklaf7xws8mc9lhu6sxhh57pj",
     "rest": "https://lava.api.liveraven.net",
+    "reason": "commission_query_failed"
+  },
+  {
+    "network": "Neutron",
+    "chain_id": "neutron-1",
+    "valoper": "neutronvaloper1md0k6m8y58w8u98x82kjah7r5zcajw7c5v5ypa",
+    "rest": "https://rest-lb.neutron.org",
     "reason": "commission_query_failed"
   }
 ]
