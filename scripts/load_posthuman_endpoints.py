@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
@@ -19,6 +19,9 @@ SOURCE_FILE = Path("config/posthuman_endpoints.txt")
 CHAIN_RE = re.compile(r"^\s*chain_id:\s*(.+?)\s*$")
 VALOPER_RE = re.compile(r"^\s*valoper_address:\s*(.+?)\s*$")
 URL_RE = re.compile(r"^\s*-\s*url:\s*(.+?)\s*$")
+
+
+CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
 
 
 def clean_value(s: str) -> str:
@@ -42,11 +45,72 @@ def normalize_valoper(valoper: str | None) -> str | None:
     return v or None
 
 
+# -----------------------------
+# Bech32 helpers
+# -----------------------------
+def bech32_polymod(values):
+    generator = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3]
+    chk = 1
+    for value in values:
+        b = (chk >> 25)
+        chk = ((chk & 0x1FFFFFF) << 5) ^ value
+        for i in range(5):
+            chk ^= generator[i] if ((b >> i) & 1) else 0
+    return chk
+
+
+def bech32_hrp_expand(hrp):
+    return [ord(x) >> 5 for x in hrp] + [0] + [ord(x) & 31 for x in hrp]
+
+
+def bech32_verify_checksum(hrp, data):
+    return bech32_polymod(bech32_hrp_expand(hrp) + data) == 1
+
+
+def bech32_create_checksum(hrp, data):
+    values = bech32_hrp_expand(hrp) + data
+    polymod = bech32_polymod(values + [0, 0, 0, 0, 0, 0]) ^ 1
+    return [(polymod >> 5 * (5 - i)) & 31 for i in range(6)]
+
+
+def bech32_encode(hrp, data):
+    combined = data + bech32_create_checksum(hrp, data)
+    return hrp + "1" + "".join([CHARSET[d] for d in combined])
+
+
+def bech32_decode(bech: str):
+    if not bech or any(ord(x) < 33 or ord(x) > 126 for x in bech):
+        return None, None
+
+    bech = bech.strip()
+    if bech.lower() != bech and bech.upper() != bech:
+        return None, None
+
+    bech = bech.lower()
+    pos = bech.rfind("1")
+    if pos < 1 or pos + 7 > len(bech):
+        return None, None
+
+    hrp = bech[:pos]
+    data_part = bech[pos + 1:]
+
+    try:
+        data = [CHARSET.index(c) for c in data_part]
+    except ValueError:
+        return None, None
+
+    if not bech32_verify_checksum(hrp, data):
+        return None, None
+
+    return hrp, data[:-6]
+
+
 def valoper_to_delegator_address(operator_address: str | None) -> str | None:
     """
-    Преобразует:
+    Корректно преобразует bech32:
       cosmosvaloper1... -> cosmos1...
       osmovaloper1...   -> osmo1...
+      juno valoper      -> juno...
     """
     if not operator_address:
         return None
@@ -56,10 +120,18 @@ def valoper_to_delegator_address(operator_address: str | None) -> str | None:
         return None
 
     try:
-        prefix, suffix = value.split("valoper1", 1)
-        if not prefix or not suffix:
+        old_hrp, data = bech32_decode(value)
+        if old_hrp is None or data is None:
             return None
-        return f"{prefix}1{suffix}"
+
+        if not old_hrp.endswith("valoper"):
+            return None
+
+        new_hrp = old_hrp[:-7]  # убираем suffix "valoper"
+        if not new_hrp:
+            return None
+
+        return bech32_encode(new_hrp, data)
     except Exception:
         return None
 
@@ -136,6 +208,16 @@ def dedup_keep_order(items: list[str]) -> list[str]:
     return result
 
 
+def ensure_delegator_address_column(db) -> None:
+    cols = db.execute(text("PRAGMA table_info(validators)")).all()
+    col_names = {row[1] for row in cols}
+
+    if "delegator_address" not in col_names:
+        db.execute(text("ALTER TABLE validators ADD COLUMN delegator_address TEXT"))
+        db.commit()
+        print("[OK] added validators.delegator_address column")
+
+
 def get_first_network_by_chain_id(db, chain_id: str):
     rows = db.execute(
         select(Network)
@@ -180,6 +262,25 @@ def get_first_endpoint(db, network_id: int, url: str):
     return rows[0] if rows else None
 
 
+def update_validator_delegator_address(db, validator_id: int, delegator_address: str | None, now):
+    if not delegator_address:
+        return
+
+    db.execute(
+        text("""
+            UPDATE validators
+            SET delegator_address = :delegator_address,
+                updated_at = :updated_at
+            WHERE id = :validator_id
+        """),
+        {
+            "delegator_address": delegator_address,
+            "updated_at": now,
+            "validator_id": validator_id,
+        },
+    )
+
+
 def main() -> None:
     if not SOURCE_FILE.exists():
         raise FileNotFoundError(f"Source file not found: {SOURCE_FILE}")
@@ -190,6 +291,8 @@ def main() -> None:
 
     db = SessionLocal()
     try:
+        ensure_delegator_address_column(db)
+
         created_validators = 0
         updated_validators = 0
         added_validator_eps = 0
@@ -238,7 +341,6 @@ def main() -> None:
                     network_id=network.id,
                     moniker="PostHuman",
                     operator_address=valoper,
-                    delegator_address=delegator_address,
                     consensus_address=None,
                     is_main=1,
                     is_enabled=1,
@@ -247,20 +349,23 @@ def main() -> None:
                 )
                 db.add(validator)
                 db.flush()
-                created_validators += 1
+
                 if delegator_address:
+                    update_validator_delegator_address(db, validator.id, delegator_address, now)
                     filled_delegator_addresses += 1
+
+                created_validators += 1
             else:
                 validator.moniker = validator.moniker or "PostHuman"
                 validator.is_main = 1
                 validator.is_enabled = 1
-
-                if delegator_address and not getattr(validator, "delegator_address", None):
-                    validator.delegator_address = delegator_address
-                    filled_delegator_addresses += 1
-
                 validator.updated_at = now
                 db.flush()
+
+                if delegator_address:
+                    update_validator_delegator_address(db, validator.id, delegator_address, now)
+                    filled_delegator_addresses += 1
+
                 updated_validators += 1
 
             for idx, url in enumerate(validator_urls, start=1):

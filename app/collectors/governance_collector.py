@@ -102,8 +102,9 @@ def fetch_validator_vote(
     Возвращает:
       validator_voted: 0/1
       validator_vote_option: YES / NO / ABSTAIN / NO_WITH_VETO
-                              или weighted: YES:0.700000,NO:0.300000
-    Используем operator_address, как ты просил.
+                             или weighted: YES:0.700000,NO:0.300000
+
+    Для gov/votes/{voter} нужно использовать account/delegator address.
     """
     if not voter_address:
         return 0, None
@@ -153,7 +154,9 @@ def build_network_list(db):
     - network enabled
     - есть основной активный validator
 
-    Для проверки голоса используем operator_address.
+    Для проверки голоса используем:
+    1) delegator_address
+    2) fallback -> operator_address
     """
     rows = db.execute(
         select(Network, Validator)
@@ -181,7 +184,10 @@ def build_network_list(db):
         if not getattr(network, "rest", None):
             continue
 
-        voter_address = getattr(validator, "operator_address", None)
+        voter_address = (
+            getattr(validator, "delegator_address", None)
+            or getattr(validator, "operator_address", None)
+        )
 
         result.append(
             {
@@ -268,6 +274,7 @@ def main() -> None:
 
         for item in items:
             network = item["network"]
+            validator = item["validator"]
             voter_address = item["voter_address"]
 
             proposals = fetch_active_proposals(network.rest)
@@ -384,7 +391,9 @@ def main() -> None:
 
             print(
                 f"[OK] {network.name}: "
-                f"active_proposals={inserted_for_network}"
+                f"active_proposals={inserted_for_network} "
+                f"| voter={voter_address or 'None'} "
+                f"| validator={getattr(validator, 'operator_address', None)}"
             )
 
         db.commit()
