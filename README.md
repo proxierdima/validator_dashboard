@@ -203,6 +203,7 @@ flowchart LR
 
 ```md
 ## Database schema and data flow (ASCII)
+```
 
 ```text
                              +----------------------+
@@ -352,8 +353,9 @@ run_health_cycle
       v
 FastAPI / Dashboard
 
-
+```
 ## System Architecture
+
 
 ```mermaid
 flowchart LR
@@ -503,4 +505,239 @@ W --> Y[FastAPI Dashboard]
 X --> Y
 ```
 
+## Entity Relationship Diagram
 
+```mermaid
+erDiagram
+    NETWORKS ||--o{ NETWORK_ASSETS : has
+    NETWORKS ||--o{ TRACKED_NETWORKS : tracked_in
+    NETWORKS ||--o{ NETWORK_ENDPOINTS : exposes
+    NETWORKS ||--o{ PUBLIC_RPC_ENDPOINTS : has
+    NETWORKS ||--o{ VALIDATORS : contains
+    NETWORKS ||--o{ SNAPSHOT_TARGETS : defines
+    NETWORKS ||--o{ GOVERNANCE_PROPOSALS : has
+    NETWORKS ||--|| NETWORK_STATUS_CURRENT : aggregates
+    NETWORKS ||--o{ EVENTS : produces
+
+    NETWORK_ENDPOINTS ||--o{ ENDPOINT_CHECKS : checked_by
+    PUBLIC_RPC_ENDPOINTS ||--o{ PUBLIC_RPC_CHECKS : checked_by
+
+    VALIDATORS ||--|| VALIDATOR_STATUS_CURRENT : current_state
+    VALIDATORS ||--o{ VALIDATOR_STATUS_HISTORY : historical_state
+    VALIDATORS ||--o{ EVENTS : related_to
+
+    SNAPSHOT_TARGETS ||--o{ SNAPSHOT_CHECKS : checked_by
+
+    NETWORKS {
+        int id PK
+        string name
+        string display_name
+        string chain_id
+        string chain_type
+        string base_denom
+        string display_denom
+        int exponent
+        string coingecko_id
+        bool is_enabled
+        datetime created_at
+        datetime updated_at
+    }
+
+    NETWORK_ASSETS {
+        int id PK
+        int network_id FK
+        string base_denom
+        string display_denom
+        string symbol
+        int exponent
+        string coingecko_id
+        datetime created_at
+    }
+
+    TRACKED_NETWORKS {
+        int id PK
+        int network_id FK
+        string custom_name
+        bool is_enabled
+        bool use_for_validator_search
+        bool use_for_validator_rpc_checks
+        datetime created_at
+        datetime updated_at
+    }
+
+    NETWORK_ENDPOINTS {
+        int id PK
+        int network_id FK
+        string endpoint_type
+        string label
+        string url
+        int priority
+        bool is_public
+        bool is_enabled
+        datetime created_at
+        datetime updated_at
+    }
+
+    ENDPOINT_CHECKS {
+        int id PK
+        int endpoint_id FK
+        string status
+        int http_status
+        float latency_ms
+        bigint remote_height
+        string chain_id_reported
+        string error_message
+        datetime checked_at
+    }
+
+    PUBLIC_RPC_ENDPOINTS {
+        int id PK
+        int network_id FK
+        string label
+        string url
+        int priority
+        bool is_enabled
+        string source
+        datetime created_at
+        datetime updated_at
+    }
+
+    PUBLIC_RPC_CHECKS {
+        int id PK
+        int public_rpc_endpoint_id FK
+        string status
+        int http_status
+        float latency_ms
+        bigint remote_height
+        string chain_id_reported
+        string error_message
+        datetime checked_at
+    }
+
+    VALIDATORS {
+        int id PK
+        int network_id FK
+        string moniker
+        string operator_address
+        string delegator_address
+        string consensus_address
+        bool is_main
+        bool is_enabled
+        datetime created_at
+        datetime updated_at
+    }
+
+    VALIDATOR_STATUS_CURRENT {
+        int validator_id PK, FK
+        string status
+        bool in_active_set
+        bool jailed
+        bool tombstoned
+        numeric tokens
+        numeric delegator_shares
+        numeric commission_rate
+        numeric commission_max_rate
+        numeric commission_max_change_rate
+        numeric min_self_delegation
+        numeric self_delegation_amount
+        int rank
+        numeric voting_power
+        bigint last_seen_height
+        datetime last_checked_at
+        json raw_json
+    }
+
+    VALIDATOR_STATUS_HISTORY {
+        int id PK
+        int validator_id FK
+        string status
+        bool in_active_set
+        bool jailed
+        bool tombstoned
+        numeric tokens
+        numeric delegator_shares
+        numeric commission_rate
+        int rank
+        numeric voting_power
+        bigint last_seen_height
+        datetime collected_at
+        json raw_json
+    }
+
+    SNAPSHOT_TARGETS {
+        int id PK
+        int network_id FK
+        string snapshot_path
+        string filename_pattern
+        string compression_type
+        bigint min_expected_size_bytes
+        int max_age_hours
+        bool is_enabled
+        datetime created_at
+        datetime updated_at
+    }
+
+    SNAPSHOT_CHECKS {
+        int id PK
+        int snapshot_target_id FK
+        string file_name
+        string file_path
+        bool file_exists
+        bigint file_size_bytes
+        datetime file_mtime
+        bigint age_seconds
+        bigint size_delta_bytes
+        string status
+        string error_message
+        datetime checked_at
+    }
+
+    GOVERNANCE_PROPOSALS {
+        int id PK
+        int network_id FK
+        string proposal_id
+        string title
+        string description
+        string status
+        datetime voting_start_time
+        datetime voting_end_time
+        string validator_voter_address
+        bool validator_voted
+        string validator_vote_option
+        datetime snapshot_at
+        datetime last_updated_at
+        bool is_latest
+    }
+
+    NETWORK_STATUS_CURRENT {
+        int network_id PK, FK
+        string validator_status
+        string endpoint_status
+        string sync_status
+        string snapshot_status
+        string governance_status
+        string reward_status
+        string overall_status
+        bigint local_height
+        bigint reference_height
+        bigint sync_diff
+        int active_alerts_count
+        datetime last_updated_at
+    }
+
+    EVENTS {
+        int id PK
+        int network_id FK
+        int validator_id FK
+        string event_type
+        string severity
+        string title
+        string message
+        string event_key
+        string status
+        datetime first_seen_at
+        datetime last_seen_at
+        datetime resolved_at
+        json metadata_json
+    }
+```
