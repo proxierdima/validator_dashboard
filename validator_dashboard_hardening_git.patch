@@ -1,0 +1,809 @@
+diff --git a/app/collectors/governance_collector.py b/app/collectors/governance_collector.py
+new file mode 100644
+index 0000000..8c76090
+--- /dev/null
++++ b/app/collectors/governance_collector.py
+@@ -0,0 +1,228 @@
++from __future__ import annotations
++
++import asyncio
++from datetime import datetime, timezone
++from typing import Any
++
++import httpx
++from sqlalchemy import select
++
++from app.core.db import SessionLocal
++from app.models import CollectorRun, GovernanceProposal, Network, NetworkEndpoint, Validator
++
++TIMEOUT = httpx.Timeout(connect=4.0, read=15.0, write=10.0, pool=10.0)
++
++V1_PATH = "/cosmos/gov/v1/proposals?pagination.limit=100&proposal_status=PROPOSAL_STATUS_VOTING_PERIOD"
++V1BETA1_PATH = "/cosmos/gov/v1beta1/proposals?pagination.limit=100&proposal_status=2"
++
++
++def normalize_base_url(url: str) -> str:
++    return (url or "").rstrip("/")
++
++
++async def fetch_json(client: httpx.AsyncClient, url: str) -> dict[str, Any] | None:
++    try:
++        response = await client.get(url)
++        if response.status_code != 200:
++            return None
++        return response.json()
++    except Exception:
++        return None
++
++
++def parse_proposals(payload: dict[str, Any] | None) -> list[dict[str, Any]]:
++    if not payload:
++        return []
++    proposals = payload.get("proposals") or []
++    if isinstance(proposals, list):
++        return proposals
++    return []
++
++
++def extract_title(proposal: dict[str, Any]) -> str | None:
++    metadata = proposal.get("metadata")
++    if isinstance(metadata, str) and metadata.strip():
++        return metadata[:4000]
++    content = proposal.get("content") or {}
++    title = content.get("title") or proposal.get("title")
++    if title is not None:
++        return str(title)[:4000]
++    messages = proposal.get("messages") or []
++    if messages:
++        return str(messages[0].get("@type") or "proposal")[:4000]
++    return None
++
++
++def extract_description(proposal: dict[str, Any]) -> str | None:
++    content = proposal.get("content") or {}
++    description = content.get("description") or proposal.get("summary")
++    if description is None:
++        return None
++    return str(description)[:5000]
++
++
++def extract_status(proposal: dict[str, Any]) -> str | None:
++    status = proposal.get("status") or proposal.get("proposal_status")
++    if status is None:
++        return None
++    return str(status)[:64]
++
++
++def extract_proposal_id(proposal: dict[str, Any]) -> int | None:
++    value = proposal.get("id") or proposal.get("proposal_id")
++    try:
++        return int(value)
++    except Exception:
++        return None
++
++
++async def collect_for_network(
++    client: httpx.AsyncClient,
++    network_id: int,
++    rest_urls: list[str],
++    validator_voter_address: str | None,
++) -> tuple[int, list[dict[str, Any]]]:
++    proposals: list[dict[str, Any]] = []
++    for rest_url in rest_urls:
++        payload = await fetch_json(client, normalize_base_url(rest_url) + V1_PATH)
++        proposals = parse_proposals(payload)
++        if proposals:
++            break
++        payload = await fetch_json(client, normalize_base_url(rest_url) + V1BETA1_PATH)
++        proposals = parse_proposals(payload)
++        if proposals:
++            break
++    return network_id, [
++        {
++            "proposal_id": extract_proposal_id(item),
++            "title": extract_title(item),
++            "description": extract_description(item),
++            "status": extract_status(item),
++            "voting_start_time": str(item.get("voting_start_time") or "")[:32] or None,
++            "voting_end_time": str(item.get("voting_end_time") or "")[:32] or None,
++            "validator_voter_address": validator_voter_address,
++            "validator_voted": 0,
++            "validator_vote_option": None,
++        }
++        for item in proposals
++        if extract_proposal_id(item) is not None
++    ]
++
++
++async def run_async(network_jobs: list[tuple[int, list[str], str | None]]) -> dict[int, list[dict[str, Any]]]:
++    async with httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=True) as client:
++        results = await asyncio.gather(
++            *[
++                collect_for_network(client, network_id, rest_urls, validator_voter_address)
++                for network_id, rest_urls, validator_voter_address in network_jobs
++            ]
++        )
++    return {network_id: proposals for network_id, proposals in results}
++
++
++def main() -> None:
++    db = SessionLocal()
++    started = datetime.now(timezone.utc)
++    run = CollectorRun(
++        collector_name="governance_collector",
++        status="running",
++        started_at=started,
++        items_processed=0,
++    )
++    db.add(run)
++    db.commit()
++    db.refresh(run)
++
++    try:
++        networks = db.execute(
++            select(Network).where(Network.is_enabled == 1).order_by(Network.name.asc())
++        ).scalars().all()
++        network_ids = [network.id for network in networks]
++        if not network_ids:
++            run.status = "success"
++            run.finished_at = datetime.now(timezone.utc)
++            run.duration_ms = int((run.finished_at - started).total_seconds() * 1000)
++            db.commit()
++            return
++
++        rest_rows = db.execute(
++            select(NetworkEndpoint.network_id, NetworkEndpoint.url)
++            .where(NetworkEndpoint.network_id.in_(network_ids))
++            .where(NetworkEndpoint.is_enabled == 1)
++            .where(NetworkEndpoint.endpoint_type == "rest")
++            .order_by(NetworkEndpoint.network_id.asc(), NetworkEndpoint.priority.asc(), NetworkEndpoint.id.asc())
++        ).all()
++        rest_map: dict[int, list[str]] = {}
++        for network_id, url in rest_rows:
++            rest_map.setdefault(network_id, []).append(url)
++
++        validator_rows = db.execute(
++            select(Validator.network_id, Validator.delegator_address)
++            .where(Validator.network_id.in_(network_ids))
++            .where(Validator.is_enabled == 1)
++            .where(Validator.is_main == 1)
++        ).all()
++        validator_map = {network_id: delegator_address for network_id, delegator_address in validator_rows}
++
++        jobs = [
++            (network.id, rest_map.get(network.id, []), validator_map.get(network.id))
++            for network in networks
++            if rest_map.get(network.id)
++        ]
++        collected = asyncio.run(run_async(jobs)) if jobs else {}
++
++        snapshot_at = datetime.now(timezone.utc).isoformat()
++        total_items = 0
++        for network in networks:
++            db.query(GovernanceProposal).filter(
++                GovernanceProposal.network_id == network.id,
++                GovernanceProposal.is_latest == 1,
++            ).update({"is_latest": 0}, synchronize_session=False)
++
++            for proposal in collected.get(network.id, []):
++                db.add(
++                    GovernanceProposal(
++                        network_id=network.id,
++                        proposal_id=proposal["proposal_id"],
++                        title=proposal["title"],
++                        description=proposal["description"],
++                        status=proposal["status"],
++                        voting_start_time=proposal["voting_start_time"],
++                        voting_end_time=proposal["voting_end_time"],
++                        yes_votes=None,
++                        no_votes=None,
++                        abstain_votes=None,
++                        no_with_veto_votes=None,
++                        validator_voter_address=proposal["validator_voter_address"],
++                        validator_voted=proposal["validator_voted"],
++                        validator_vote_option=proposal["validator_vote_option"],
++                        snapshot_at=snapshot_at,
++                        last_updated_at=snapshot_at,
++                        is_latest=1,
++                    )
++                )
++                total_items += 1
++
++        finished = datetime.now(timezone.utc)
++        run.status = "success"
++        run.finished_at = finished
++        run.duration_ms = int((finished - started).total_seconds() * 1000)
++        run.items_processed = total_items
++        db.commit()
++        print(f"Governance collector complete: {total_items} proposals")
++    except Exception as exc:
++        db.rollback()
++        finished = datetime.now(timezone.utc)
++        run.status = "failed"
++        run.finished_at = finished
++        run.duration_ms = int((finished - started).total_seconds() * 1000)
++        run.error_message = str(exc)[:2000]
++        db.add(run)
++        db.commit()
++        raise
++    finally:
++        db.close()
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/app/collectors/reward_status_collector.py b/app/collectors/reward_status_collector.py
+new file mode 100644
+index 0000000..97ac672
+--- /dev/null
++++ b/app/collectors/reward_status_collector.py
+@@ -0,0 +1,182 @@
++from __future__ import annotations
++
++import json
++import os
++from datetime import datetime, timedelta, timezone
++from pathlib import Path
++
++from sqlalchemy import select
++
++from app.core.db import SessionLocal
++from app.models import CollectorRun, Event, Network
++
++DATA_FILE = Path(os.getenv("COMMISSION_SNAPSHOT_PATH", "commission_snapshot.json"))
++MAX_AGE_HOURS = int(os.getenv("REWARD_SNAPSHOT_MAX_AGE_HOURS", "24"))
++
++
++def normalize(value: str | None) -> str:
++    return (value or "").strip().lower()
++
++
++def open_or_update_event(db, network_id: int, severity: str, title: str, message: str, now: datetime) -> None:
++    event_key = f"reward_status:{network_id}"
++    existing = db.execute(
++        select(Event)
++        .where(Event.event_key == event_key)
++        .where(Event.status == "open")
++        .limit(1)
++    ).scalar_one_or_none()
++    if existing is None:
++        db.add(
++            Event(
++                network_id=network_id,
++                validator_id=None,
++                event_type="reward_status",
++                severity=severity,
++                title=title,
++                message=message,
++                event_key=event_key,
++                status="open",
++                first_seen_at=now,
++                last_seen_at=now,
++                resolved_at=None,
++                metadata_json=None,
++            )
++        )
++        return
++
++    existing.severity = severity
++    existing.title = title
++    existing.message = message
++    existing.last_seen_at = now
++    existing.resolved_at = None
++
++
++def resolve_event(db, network_id: int, now: datetime) -> None:
++    event_key = f"reward_status:{network_id}"
++    existing = db.execute(
++        select(Event)
++        .where(Event.event_key == event_key)
++        .where(Event.status == "open")
++        .limit(1)
++    ).scalar_one_or_none()
++    if existing is None:
++        return
++    existing.status = "resolved"
++    existing.last_seen_at = now
++    existing.resolved_at = now
++
++
++def build_snapshot_lookup(data: dict) -> dict[str, dict]:
++    rows = data.get("rows") or []
++    totals_by_network = data.get("totals_by_network") or {}
++    lookup: dict[str, dict] = {}
++    for name, total in totals_by_network.items():
++        lookup[normalize(name)] = {"total": total}
++    for row in rows:
++        network_name = row.get("network") or row.get("chain") or row.get("name")
++        if network_name:
++            key = normalize(str(network_name))
++            entry = lookup.setdefault(key, {})
++            entry.setdefault("rows", []).append(row)
++    return lookup
++
++
++def main() -> None:
++    db = SessionLocal()
++    started = datetime.now(timezone.utc)
++    run = CollectorRun(
++        collector_name="reward_status_collector",
++        status="running",
++        started_at=started,
++        items_processed=0,
++    )
++    db.add(run)
++    db.commit()
++    db.refresh(run)
++
++    try:
++        networks = db.execute(
++            select(Network).where(Network.is_enabled == 1).order_by(Network.name.asc())
++        ).scalars().all()
++        now = datetime.now(timezone.utc)
++
++        if not DATA_FILE.exists():
++            for network in networks:
++                open_or_update_event(
++                    db,
++                    network.id,
++                    "critical",
++                    "Rewards snapshot missing",
++                    f"Expected rewards snapshot file not found: {DATA_FILE}",
++                    now,
++                )
++            run.status = "success"
++            run.finished_at = now
++            run.duration_ms = int((now - started).total_seconds() * 1000)
++            run.items_processed = len(networks)
++            db.commit()
++            print("Reward status collector complete: snapshot missing")
++            return
++
++        mtime = datetime.fromtimestamp(DATA_FILE.stat().st_mtime, tz=timezone.utc)
++        snapshot_age = now - mtime
++        is_stale = snapshot_age > timedelta(hours=MAX_AGE_HOURS)
++
++        data = json.loads(DATA_FILE.read_text(encoding="utf-8"))
++        lookup = build_snapshot_lookup(data)
++
++        processed = 0
++        for network in networks:
++            aliases = {
++                normalize(network.name),
++                normalize(network.display_name),
++                normalize(network.directory),
++                normalize(network.chain_id),
++            }
++            matched = next((lookup[key] for key in aliases if key and key in lookup), None)
++
++            if is_stale:
++                open_or_update_event(
++                    db,
++                    network.id,
++                    "warning",
++                    "Rewards snapshot is stale",
++                    f"Rewards snapshot age is {int(snapshot_age.total_seconds())} seconds, exceeding {MAX_AGE_HOURS} hours.",
++                    now,
++                )
++            elif matched is None:
++                open_or_update_event(
++                    db,
++                    network.id,
++                    "warning",
++                    "Network missing in rewards snapshot",
++                    f"Network '{network.name}' was not found in {DATA_FILE.name}.",
++                    now,
++                )
++            else:
++                resolve_event(db, network.id, now)
++            processed += 1
++
++        run.status = "success"
++        run.finished_at = now
++        run.duration_ms = int((now - started).total_seconds() * 1000)
++        run.items_processed = processed
++        db.commit()
++        print(f"Reward status collector complete: {processed} networks")
++    except Exception as exc:
++        db.rollback()
++        finished = datetime.now(timezone.utc)
++        run.status = "failed"
++        run.finished_at = finished
++        run.duration_ms = int((finished - started).total_seconds() * 1000)
++        run.error_message = str(exc)[:2000]
++        db.add(run)
++        db.commit()
++        raise
++    finally:
++        db.close()
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/app/models/endpoint.py b/app/models/endpoint.py
+index b881f82..b87c497 100644
+--- a/app/models/endpoint.py
++++ b/app/models/endpoint.py
+@@ -1,4 +1,4 @@
+-from sqlalchemy import String, Integer, DateTime, ForeignKey
++from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint, func
+ from sqlalchemy.orm import Mapped, mapped_column, relationship
+ 
+ from app.models.base import Base
+@@ -6,18 +6,29 @@ from app.models.base import Base
+ 
+ class NetworkEndpoint(Base):
+     __tablename__ = "network_endpoints"
++    __table_args__ = (
++        UniqueConstraint(
++            "network_id",
++            "endpoint_type",
++            "url",
++            name="uq_network_endpoint_network_type_url",
++        ),
++    )
+ 
+     id: Mapped[int] = mapped_column(primary_key=True)
+     network_id: Mapped[int] = mapped_column(ForeignKey("networks.id"), index=True)
+-    endpoint_type: Mapped[str] = mapped_column(String(20))   # rpc, rest, grpc
+-    label: Mapped[str | None] = mapped_column(String(20))    # rpc1, rpc2, rest1
++    endpoint_type: Mapped[str] = mapped_column(String(20))  # rpc, rest, grpc
++    label: Mapped[str | None] = mapped_column(String(20))  # rpc1, rpc2, rest1
+     url: Mapped[str] = mapped_column(String(500))
+     priority: Mapped[int] = mapped_column(Integer, default=1)
+     is_public: Mapped[int] = mapped_column(Integer, default=1)
+     is_enabled: Mapped[int] = mapped_column(Integer, default=1)
+-
+-    created_at: Mapped[DateTime | None] = mapped_column(DateTime)
+-    updated_at: Mapped[DateTime | None] = mapped_column(DateTime)
++    created_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
++    updated_at: Mapped[DateTime] = mapped_column(
++        DateTime,
++        server_default=func.now(),
++        onupdate=func.now(),
++    )
+ 
+     network = relationship("Network", back_populates="endpoints")
+     checks = relationship(
+@@ -32,7 +43,7 @@ class EndpointCheck(Base):
+     endpoint_id: Mapped[int] = mapped_column(
+         ForeignKey("network_endpoints.id"), index=True
+     )
+-    status: Mapped[str] = mapped_column(String(20), index=True)   # ok, warning, critical
++    status: Mapped[str] = mapped_column(String(20), index=True)  # ok, warning, critical
+     http_status: Mapped[int | None] = mapped_column(Integer)
+     latency_ms: Mapped[int | None] = mapped_column(Integer)
+     remote_height: Mapped[int | None] = mapped_column(Integer)
+diff --git a/app/models/network_asset.py b/app/models/network_asset.py
+index 07627a0..1e945e7 100644
+--- a/app/models/network_asset.py
++++ b/app/models/network_asset.py
+@@ -1,4 +1,4 @@
+-from sqlalchemy import String, Integer, DateTime, ForeignKey
++from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint, func
+ from sqlalchemy.orm import Mapped, mapped_column, relationship
+ 
+ from app.models.base import Base
+@@ -6,17 +6,26 @@ from app.models.base import Base
+ 
+ class NetworkAsset(Base):
+     __tablename__ = "network_assets"
++    __table_args__ = (
++        UniqueConstraint(
++            "network_id",
++            "base_denom",
++            name="uq_network_asset_network_base_denom",
++        ),
++    )
+ 
+     id: Mapped[int] = mapped_column(primary_key=True)
+     network_id: Mapped[int] = mapped_column(ForeignKey("networks.id"), index=True)
+-
+     base_denom: Mapped[str] = mapped_column(String(200), index=True)
+     display_denom: Mapped[str | None] = mapped_column(String(100))
+     exponent: Mapped[int] = mapped_column(Integer, default=0)
+     symbol: Mapped[str | None] = mapped_column(String(50))
+     coingecko_id: Mapped[str | None] = mapped_column(String(120))
+-
+-    created_at: Mapped[DateTime | None] = mapped_column(DateTime)
+-    updated_at: Mapped[DateTime | None] = mapped_column(DateTime)
++    created_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
++    updated_at: Mapped[DateTime] = mapped_column(
++        DateTime,
++        server_default=func.now(),
++        onupdate=func.now(),
++    )
+ 
+     network = relationship("Network")
+diff --git a/app/models/public_rpc.py b/app/models/public_rpc.py
+index 9b98907..374e39c 100644
+--- a/app/models/public_rpc.py
++++ b/app/models/public_rpc.py
+@@ -1,4 +1,4 @@
+-from sqlalchemy import String, Integer, DateTime, ForeignKey
++from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint, func
+ from sqlalchemy.orm import Mapped, mapped_column, relationship
+ 
+ from app.models.base import Base
+@@ -6,6 +6,13 @@ from app.models.base import Base
+ 
+ class PublicRpcEndpoint(Base):
+     __tablename__ = "public_rpc_endpoints"
++    __table_args__ = (
++        UniqueConstraint(
++            "network_id",
++            "url",
++            name="uq_public_rpc_endpoint_network_url",
++        ),
++    )
+ 
+     id: Mapped[int] = mapped_column(primary_key=True)
+     network_id: Mapped[int] = mapped_column(ForeignKey("networks.id"), index=True)
+@@ -14,14 +21,16 @@ class PublicRpcEndpoint(Base):
+     priority: Mapped[int] = mapped_column(Integer, default=1)
+     is_enabled: Mapped[int] = mapped_column(Integer, default=1)
+     source: Mapped[str | None] = mapped_column(String(100))  # chain-registry, manual, etc.
+-    created_at: Mapped[DateTime | None] = mapped_column(DateTime)
+-    updated_at: Mapped[DateTime | None] = mapped_column(DateTime)
++    created_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
++    updated_at: Mapped[DateTime] = mapped_column(
++        DateTime,
++        server_default=func.now(),
++        onupdate=func.now(),
++    )
+ 
+     network = relationship("Network")
+     checks = relationship(
+-        "PublicRpcCheck",
+-        back_populates="endpoint",
+-        cascade="all, delete-orphan",
++        "PublicRpcCheck", back_populates="endpoint", cascade="all, delete-orphan"
+     )
+ 
+ 
+diff --git a/app/models/snapshot.py b/app/models/snapshot.py
+index 6811be0..62cce6d 100644
+--- a/app/models/snapshot.py
++++ b/app/models/snapshot.py
+@@ -1,4 +1,4 @@
+-from sqlalchemy import String, Integer, DateTime, ForeignKey
++from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint, func
+ from sqlalchemy.orm import Mapped, mapped_column, relationship
+ 
+ from app.models.base import Base
+@@ -6,6 +6,14 @@ from app.models.base import Base
+ 
+ class SnapshotTarget(Base):
+     __tablename__ = "snapshot_targets"
++    __table_args__ = (
++        UniqueConstraint(
++            "network_id",
++            "snapshot_path",
++            "filename_pattern",
++            name="uq_snapshot_target_network_path_pattern",
++        ),
++    )
+ 
+     id: Mapped[int] = mapped_column(primary_key=True)
+     network_id: Mapped[int] = mapped_column(ForeignKey("networks.id"), index=True)
+@@ -15,9 +23,12 @@ class SnapshotTarget(Base):
+     min_expected_size_bytes: Mapped[int | None] = mapped_column(Integer)
+     max_age_hours: Mapped[int] = mapped_column(Integer, default=24)
+     is_enabled: Mapped[int] = mapped_column(Integer, default=1)
+-
+-    created_at: Mapped[DateTime | None] = mapped_column(DateTime)
+-    updated_at: Mapped[DateTime | None] = mapped_column(DateTime)
++    created_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
++    updated_at: Mapped[DateTime] = mapped_column(
++        DateTime,
++        server_default=func.now(),
++        onupdate=func.now(),
++    )
+ 
+     network = relationship("Network", back_populates="snapshot_targets")
+     checks = relationship(
+diff --git a/app/models/tracked_network.py b/app/models/tracked_network.py
+index e6818d3..64b3e3e 100644
+--- a/app/models/tracked_network.py
++++ b/app/models/tracked_network.py
+@@ -1,4 +1,4 @@
+-from sqlalchemy import String, Integer, DateTime, ForeignKey
++from sqlalchemy import DateTime, ForeignKey, Integer, String, func
+ from sqlalchemy.orm import Mapped, mapped_column, relationship
+ 
+ from app.models.base import Base
+@@ -9,14 +9,15 @@ class TrackedNetwork(Base):
+ 
+     id: Mapped[int] = mapped_column(primary_key=True)
+     network_id: Mapped[int] = mapped_column(ForeignKey("networks.id"), index=True, unique=True)
+-
+     custom_name: Mapped[str | None] = mapped_column(String(150))
+     is_enabled: Mapped[int] = mapped_column(Integer, default=1)
+-
+     use_for_validator_search: Mapped[int] = mapped_column(Integer, default=1)
+     use_for_validator_rpc_checks: Mapped[int] = mapped_column(Integer, default=1)
+-
+-    created_at: Mapped[DateTime | None] = mapped_column(DateTime)
+-    updated_at: Mapped[DateTime | None] = mapped_column(DateTime)
++    created_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
++    updated_at: Mapped[DateTime] = mapped_column(
++        DateTime,
++        server_default=func.now(),
++        onupdate=func.now(),
++    )
+ 
+     network = relationship("Network")
+diff --git a/app/models/validator.py b/app/models/validator.py
+index 00b9a3b..afd3096 100644
+--- a/app/models/validator.py
++++ b/app/models/validator.py
+@@ -1,4 +1,4 @@
+-from sqlalchemy import String, Integer, DateTime, ForeignKey, UniqueConstraint
++from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint, func
+ from sqlalchemy.orm import Mapped, mapped_column, relationship
+ 
+ from app.models.base import Base
+@@ -18,9 +18,12 @@ class Validator(Base):
+     consensus_address: Mapped[str | None] = mapped_column(String(200))
+     is_main: Mapped[int] = mapped_column(Integer, default=1)
+     is_enabled: Mapped[int] = mapped_column(Integer, default=1)
+-
+-    created_at: Mapped[DateTime | None] = mapped_column(DateTime)
+-    updated_at: Mapped[DateTime | None] = mapped_column(DateTime)
++    created_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
++    updated_at: Mapped[DateTime] = mapped_column(
++        DateTime,
++        server_default=func.now(),
++        onupdate=func.now(),
++    )
+ 
+     network = relationship("Network", back_populates="validators")
+     current_status = relationship(
+diff --git a/app/services/network_status_aggregator.py b/app/services/network_status_aggregator.py
+index 91a9cd5..5ba4239 100644
+--- a/app/services/network_status_aggregator.py
++++ b/app/services/network_status_aggregator.py
+@@ -3,13 +3,14 @@ from __future__ import annotations
+ from collections import defaultdict
+ from datetime import datetime, timezone
+ 
+-from sqlalchemy import select, func
+-from sqlalchemy.orm import Session
++from sqlalchemy import func, select
+ 
+ from app.core.db import SessionLocal
+ from app.models import (
++    CollectorRun,
+     EndpointCheck,
+     Event,
++    GovernanceProposal,
+     Network,
+     NetworkEndpoint,
+     NetworkStatusCurrent,
+@@ -52,10 +53,10 @@ def final_overall_status(*statuses: str | None) -> str:
+     return "ok"
+ 
+ 
+-def endpoint_group_status(rows: list[EndpointCheck]) -> str:
++def endpoint_group_status(rows: list[object]) -> str:
+     if not rows:
+         return "unknown"
+-    statuses = [r.status for r in rows]
++    statuses = [getattr(r, 'status', None) for r in rows]
+     if any(s == "critical" for s in statuses):
+         if all(s == "critical" for s in statuses):
+             return "critical"
+@@ -91,11 +92,52 @@ def sync_status_from_heights(local_height: int | None, reference_height: int | N
+     return "critical", diff
+ 
+ 
++def governance_status_from_rows(rows: list[GovernanceProposal], collector_ok: bool) -> str:
++    if not collector_ok:
++        return "unknown"
++    if not rows:
++        return "ok"
++    if any((row.validator_voted or 0) != 1 for row in rows):
++        return "warning"
++    return "ok"
++
++
++def reward_status_from_events(rows: list[Event], collector_ok: bool) -> str:
++    if not collector_ok:
++        return "unknown"
++    if not rows:
++        return "ok"
++    severities = [row.severity for row in rows]
++    if any(s == "critical" for s in severities):
++        return "critical"
++    if any(s == "warning" for s in severities):
++        return "warning"
++    return "ok"
++
++
++def latest_collector_success_map(db, collector_names: list[str]) -> dict[str, bool]:
++    rows = db.execute(
++        select(CollectorRun.collector_name, func.max(CollectorRun.finished_at))
++        .where(CollectorRun.collector_name.in_(collector_names))
++        .where(CollectorRun.status == "success")
++        .group_by(CollectorRun.collector_name)
++    ).all()
++    result = {name: False for name in collector_names}
++    for name, _ in rows:
++        result[name] = True
++    return result
++
++
+ def main() -> None:
+     db = SessionLocal()
+     try:
+         now = datetime.now(timezone.utc)
+ 
++        collector_success = latest_collector_success_map(
++            db,
++            ["governance_collector", "reward_status_collector"],
++        )
++
+         networks = db.execute(
+             select(Network).where(Network.is_enabled == 1).order_by(Network.name.asc())
+         ).scalars().all()
+@@ -183,6 +225,26 @@ def main() -> None:
+             ).all()
+         )
+ 
++        governance_rows = db.execute(
++            select(GovernanceProposal)
++            .where(GovernanceProposal.network_id.in_(network_ids))
++            .where(GovernanceProposal.is_latest == 1)
++        ).scalars().all()
++        governance_map: dict[int, list[GovernanceProposal]] = defaultdict(list)
++        for row in governance_rows:
++            governance_map[row.network_id].append(row)
++
++        reward_event_rows = db.execute(
++            select(Event)
++            .where(Event.network_id.in_(network_ids))
++            .where(Event.event_type == "reward_status")
++            .where(Event.status == "open")
++        ).scalars().all()
++        reward_event_map: dict[int, list[Event]] = defaultdict(list)
++        for row in reward_event_rows:
++            if row.network_id is not None:
++                reward_event_map[row.network_id].append(row)
++
+         existing_rows = db.execute(
+             select(NetworkStatusCurrent).where(NetworkStatusCurrent.network_id.in_(network_ids))
+         ).scalars().all()
+@@ -205,11 +267,16 @@ def main() -> None:
+                 local_height = vrow.last_seen_height
+ 
+             reference_height = max(public_rpc_height_map.get(network.id, []) or [0]) or None
+-
+             sync_status, sync_diff = sync_status_from_heights(local_height, reference_height)
+ 
+-            governance_status = "unknown"
+-            reward_status = "unknown"
++            governance_status = governance_status_from_rows(
++                governance_map.get(network.id, []),
++                collector_success["governance_collector"],
++            )
++            reward_status = reward_status_from_events(
++                reward_event_map.get(network.id, []),
++                collector_success["reward_status_collector"],
++            )
+ 
+             overall_status = final_overall_status(
+                 validator_status,
+diff --git a/reset_db.sh b/reset_db.sh
+index 9d6abb1..6ca8018 100644
+--- a/reset_db.sh
++++ b/reset_db.sh
+@@ -7,5 +7,7 @@ python3 -m scripts.load_posthuman_endpoints
+ python3 -m scripts.load_public_rpcs
+ python3 -m app.collectors.endpoint_health_collector
+ python3 -m app.collectors.validator_status_collector
++python3 -m app.collectors.governance_collector
++python3 -m app.collectors.reward_status_collector
+ python3 -m app.services.network_status_aggregator
+-python3 -m app.tasks.run_health_cycle
+\ No newline at end of file
++python3 -m app.tasks.run_health_cycle
