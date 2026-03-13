@@ -351,3 +351,156 @@ run_health_cycle
       |
       v
 FastAPI / Dashboard
+
+
+## System Architecture
+
+```mermaid
+flowchart LR
+
+subgraph Sources
+A1[Cosmos chain-registry]
+A2[PostHuman endpoint config]
+A3[RPC endpoints]
+A4[REST endpoints]
+A5[Snapshot storage]
+A6[Governance APIs]
+end
+
+subgraph Bootstrap
+B1[init_db]
+B2[load_chain_registry]
+B3[load_tracked_networks]
+B4[load_posthuman_endpoints]
+B5[load_public_rpcs]
+end
+
+subgraph ReferenceData
+C1[(networks)]
+C2[(network_assets)]
+C3[(tracked_networks)]
+C4[(network_endpoints)]
+C5[(validators)]
+end
+
+subgraph Collectors
+D1[endpoint_health_collector]
+D2[validator_status_collector]
+D3[snapshot_collector]
+D4[governance_collector]
+end
+
+subgraph Metrics
+E1[(endpoint_checks)]
+E2[(validator_status_current)]
+E3[(validator_status_history)]
+E4[(snapshot_checks)]
+E5[(governance_proposals)]
+E6[(collector_runs)]
+end
+
+subgraph Aggregation
+F1[network_status_aggregator]
+F2[(network_status_current)]
+F3[(events)]
+end
+
+subgraph Application
+G1[FastAPI API]
+G2[Dashboard UI]
+G3[Alerts / Reports]
+end
+
+A1 --> B2
+A2 --> B4
+A3 --> D1
+A4 --> D2
+A5 --> D3
+A6 --> D4
+
+B1 --> C1
+B2 --> C1
+B2 --> C2
+B2 --> C4
+
+B3 --> C3
+B4 --> C5
+B4 --> C4
+
+D1 --> E1
+D2 --> E2
+D2 --> E3
+D3 --> E4
+D4 --> E5
+
+D1 --> E6
+D2 --> E6
+D3 --> E6
+D4 --> E6
+
+E1 --> F1
+E2 --> F1
+E4 --> F1
+E5 --> F1
+
+F1 --> F2
+F1 --> F3
+
+F2 --> G1
+F3 --> G1
+
+G1 --> G2
+G1 --> G3
+```
+
+
+## Monitoring Data Pipeline
+
+```mermaid
+flowchart TD
+
+A[chain-registry] --> B[load_chain_registry]
+
+B --> C[(networks)]
+B --> D[(network_assets)]
+B --> E[(network_endpoints)]
+
+F[posthuman_endpoints config] --> G[load_posthuman_endpoints]
+
+G --> H[(validators)]
+G --> E
+
+I[load_tracked_networks] --> J[(tracked_networks)]
+
+E --> K[endpoint_health_collector]
+
+K --> L[(endpoint_checks)]
+K --> M[(collector_runs)]
+
+H --> N[validator_status_collector]
+
+N --> O[(validator_status_current)]
+N --> P[(validator_status_history)]
+N --> M
+
+Q[(snapshot_targets)] --> R[snapshot_collector]
+
+R --> S[(snapshot_checks)]
+R --> M
+
+T[governance_collector] --> U[(governance_proposals)]
+T --> M
+
+L --> V[network_status_aggregator]
+O --> V
+S --> V
+U --> V
+
+V --> W[(network_status_current)]
+V --> X[(events)]
+
+W --> Y[FastAPI Dashboard]
+X --> Y
+```
+
+
