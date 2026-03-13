@@ -1,0 +1,41 @@
+
+.validator-kv {
+  display: grid;
+  gap: 4px;
+}
+
+.validator-kv-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  line-height: 1.35;
+}
+
+.validator-kv-label {
+  color: #666;
+}
+
+.validator-kv-value {
+  font-weight: 600;
+}
+
+.validator-kv {
+  display: grid;
+  gap: 4px;
+}
+
+.validator-kv-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  line-height: 1.35;
+}
+
+.validator-kv-label {
+  color: #666;
+  min-width: 140px;
+}
+
+.validator-kv-value {
+  font-weight: 600;
+}

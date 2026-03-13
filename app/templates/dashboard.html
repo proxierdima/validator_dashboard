@@ -82,9 +82,21 @@
               <div class="details-grid">
                 <div class="details-item">
                   <div class="details-label">Validator status</div>
-                  <div class="details-slash-params">Status / Jailed / Commission / Self delegation / Total delegation / Last seen height</div>
-                  <div class="details-slash-values mono">
-                    {{ row.validator_status_display }} / {{ row.validator_jailed_display }} / {{ row.validator_commission_display }} / {{ row.validator_self_delegation_display }} / {{ row.validator_total_delegation_display }} / {{ row.validator_last_seen_height_display }}
+                  {% set validator_items = [
+                    ("Status", row.validator_status_display),
+                    ("Jailed", row.validator_jailed_display),
+                    ("Commission", row.validator_commission_display),
+                    ("Self delegation", row.validator_self_delegation_display),
+                    ("Total delegation", row.validator_total_delegation_display),
+                    ("Last seen height", row.validator_last_seen_height_display),
+                  ] %}
+                  <div class="validator-kv mono">
+                    {% for label, value in validator_items %}
+                    <div class="validator-kv-row">
+                      <span class="validator-kv-label">{{ label }}:</span>
+                      <strong class="validator-kv-value">{{ value }}</strong>
+                    </div>
+                    {% endfor %}
                   </div>
                   {% if row.validator_status_reason %}
                   <div class="details-error">{{ row.validator_status_reason }}</div>

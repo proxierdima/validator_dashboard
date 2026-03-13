@@ -338,10 +338,10 @@ def get_dashboard_rows(conn):
 
         item["validator_status_display"] = display_value(item.get("validator_chain_status"))
         item["validator_jailed_display"] = bool_display(item.get("validator_jailed"))
-        item["validator_commission_display"] = display_value(item.get("validator_commission_rate"))
-        item["validator_self_delegation_display"] = display_value(item.get("validator_self_delegation_amount"))
-        item["validator_total_delegation_display"] = display_value(item.get("validator_total_delegation_amount"))
-        item["validator_last_seen_height_display"] = display_value(item.get("validator_last_seen_height"))
+        item["validator_commission_display"] = format_percent_from_ratio(item.get("validator_commission_rate"))
+        item["validator_self_delegation_display"] = format_number(item.get("validator_self_delegation_amount"))
+        item["validator_total_delegation_display"] = format_number(item.get("validator_total_delegation_amount"))
+        item["validator_last_seen_height_display"] = format_number(item.get("validator_last_seen_height"), decimals=0)
 
         item["validator_status_reason"] = None
         item["validator_rpc_details"] = []
