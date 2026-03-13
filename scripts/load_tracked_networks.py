@@ -16,7 +16,14 @@ NAMES_FILE = Path("config/posthuman_network_names.txt")
 
 
 def normalize(s: str) -> str:
-    return " ".join((s or "").strip().lower().split())
+    return (
+        (s or "")
+        .strip()
+        .lower()
+        .replace("-", "")
+        .replace("_", "")
+        .replace(" ", "")
+    )
 
 
 def load_names() -> list[str]:
@@ -26,7 +33,7 @@ def load_names() -> list[str]:
 
     for line in raw:
         name = line.strip()
-        if not name:
+        if not name or name.startswith("#"):
             continue
         key = normalize(name)
         if key in seen:
@@ -35,6 +42,98 @@ def load_names() -> list[str]:
         result.append(name)
 
     return result
+
+
+def is_testnet_network(net: Network) -> bool:
+    chain_type = normalize(getattr(net, "chain_type", "") or "")
+    chain_id = normalize(getattr(net, "chain_id", "") or "")
+    directory = normalize(getattr(net, "directory", "") or "")
+    name = normalize(getattr(net, "name", "") or "")
+    display_name = normalize(getattr(net, "display_name", "") or "")
+
+    return (
+        "testnet" in chain_type
+        or "testnet" in chain_id
+        or "testnet" in directory
+        or "testnet" in name
+        or "testnet" in display_name
+    )
+
+
+def build_network_keys(net: Network) -> set[str]:
+    keys: set[str] = set()
+
+    for value in (
+        getattr(net, "name", None),
+        getattr(net, "display_name", None),
+        getattr(net, "directory", None),
+        getattr(net, "chain_id", None),
+    ):
+        n = normalize(value)
+        if n:
+            keys.add(n)
+
+    if is_testnet_network(net):
+        extra = set()
+        for k in keys:
+            if not k.endswith("testnet"):
+                extra.add(f"{k}testnet")
+        keys |= extra
+
+    return keys
+
+
+def choose_best_match(wanted: str, networks: list[Network]) -> Network | None:
+    wanted_norm = normalize(wanted)
+    wanted_is_testnet = wanted_norm.endswith("testnet")
+    wanted_base = wanted_norm[:-7] if wanted_is_testnet else wanted_norm
+
+    exact_matches: list[Network] = []
+    base_matches: list[Network] = []
+
+    for net in networks:
+        keys = build_network_keys(net)
+
+        if wanted_norm in keys:
+            exact_matches.append(net)
+            continue
+
+        if wanted_is_testnet and wanted_base in keys:
+            base_matches.append(net)
+
+    candidates = exact_matches if exact_matches else base_matches
+    if not candidates:
+        return None
+
+    if wanted_is_testnet:
+        testnet_candidates = [n for n in candidates if is_testnet_network(n)]
+        if testnet_candidates:
+            return sorted(
+                testnet_candidates,
+                key=lambda n: (
+                    normalize(getattr(n, "directory", "") or ""),
+                    normalize(getattr(n, "chain_id", "") or ""),
+                ),
+            )[0]
+    else:
+        mainnet_candidates = [n for n in candidates if not is_testnet_network(n)]
+        if mainnet_candidates:
+            return sorted(
+                mainnet_candidates,
+                key=lambda n: (
+                    normalize(getattr(n, "directory", "") or ""),
+                    normalize(getattr(n, "chain_id", "") or ""),
+                ),
+            )[0]
+
+    return sorted(
+        candidates,
+        key=lambda n: (
+            0 if is_testnet_network(n) == wanted_is_testnet else 1,
+            normalize(getattr(n, "directory", "") or ""),
+            normalize(getattr(n, "chain_id", "") or ""),
+        ),
+    )[0]
 
 
 def main() -> None:
@@ -54,13 +153,7 @@ def main() -> None:
         missing = []
 
         for wanted in names:
-            wanted_norm = normalize(wanted)
-            found = None
-
-            for net in networks:
-                if normalize(net.name or "") == wanted_norm or normalize(net.display_name or "") == wanted_norm:
-                    found = net
-                    break
+            found = choose_best_match(wanted, networks)
 
             if not found:
                 missing.append(wanted)
@@ -88,7 +181,16 @@ def main() -> None:
                 row.use_for_validator_rpc_checks = 1
                 row.updated_at = now
 
-            matched.append((wanted, found.chain_id, found.name, found.display_name))
+            matched.append(
+                (
+                    wanted,
+                    found.chain_id,
+                    found.name,
+                    found.display_name,
+                    found.directory,
+                    found.chain_type,
+                )
+            )
 
         db.commit()
 
@@ -96,8 +198,11 @@ def main() -> None:
 
         if matched:
             print("\nMatched:")
-            for wanted, chain_id, name, display_name in matched:
-                print(f"  - {wanted} -> {display_name or name} | {chain_id}")
+            for wanted, chain_id, name, display_name, directory, chain_type in matched:
+                print(
+                    f"  - {wanted} -> {display_name or name} | "
+                    f"{chain_id} | dir={directory} | type={chain_type}"
+                )
 
         if missing:
             print("\nNot matched:")

@@ -17,6 +17,7 @@ from app.core.db import SessionLocal
 from app.models import Network, NetworkAsset, NetworkEndpoint
 
 CHAIN_REGISTRY_DIR = Path("./chain-registry")
+CHAIN_REGISTRY_TESTNETS_DIR = CHAIN_REGISTRY_DIR / "testnets"
 GIT_URL = "https://github.com/cosmos/chain-registry.git"
 NETWORKS_FILE = Path("./config/posthuman_network_names.txt")
 
@@ -122,7 +123,10 @@ def parse_endpoints(chain_json: dict[str, Any]) -> list[dict[str, str]]:
     return result
 
 
-def extract_asset_meta(assetlist_json: dict[str, Any] | None, base_denom: str | None) -> tuple[str | None, int | None, str | None, list[dict[str, Any]]]:
+def extract_asset_meta(
+    assetlist_json: dict[str, Any] | None,
+    base_denom: str | None,
+) -> tuple[str | None, int | None, str | None, list[dict[str, Any]]]:
     """
     Возвращает:
     - display_denom
@@ -241,15 +245,60 @@ def is_endpoint_working(endpoint_type: str, url: str) -> bool:
     return False
 
 
+def build_match_keys(chain_file: Path, chain_json: dict[str, Any] | None = None) -> set[str]:
+    """
+    Возвращает набор normalized-ключей, по которым можно матчить запись
+    из config/posthuman_network_names.txt.
+
+    Поддерживает:
+    - mainnet: chain-registry/<dir>/chain.json
+    - testnet: chain-registry/testnets/<dir>/chain.json
+    """
+    keys: set[str] = set()
+
+    directory = chain_file.parent.name
+    keys.add(norm(directory))
+
+    is_testnet = chain_file.parent.parent.name == "testnets"
+
+    if chain_json:
+        for value in (
+            chain_json.get("chain_name"),
+            chain_json.get("name"),
+            chain_json.get("pretty_name"),
+            chain_json.get("display_name"),
+            chain_json.get("chain_id"),
+        ):
+            n = norm(value)
+            if n:
+                keys.add(n)
+
+    if is_testnet:
+        base_keys = list(keys)
+        for k in base_keys:
+            if k and not k.endswith("testnet"):
+                keys.add(f"{k}testnet")
+
+    return keys
+
+
+def collect_chain_files() -> list[Path]:
+    mainnet_files = sorted(CHAIN_REGISTRY_DIR.glob("*/chain.json"))
+    testnet_files = sorted(CHAIN_REGISTRY_TESTNETS_DIR.glob("*/chain.json"))
+    return mainnet_files + testnet_files
+
+
 def process_chain_file(chain_file: Path) -> dict[str, Any] | None:
-    if chain_file.parts[-2].startswith("."):
+    parent_name = chain_file.parent.name
+    if parent_name.startswith("."):
         return None
 
     data = load_json(chain_file)
     if not data:
         return None
 
-    directory = chain_file.parent.name
+    directory = parent_name
+    is_testnet = chain_file.parent.parent.name == "testnets"
 
     name = first_nonempty(
         data.get("chain_name"),
@@ -266,7 +315,7 @@ def process_chain_file(chain_file: Path) -> dict[str, Any] | None:
     )
 
     chain_id = data.get("chain_id")
-    chain_type = "cosmos"
+    chain_type = "cosmos_testnet" if is_testnet else "cosmos"
 
     fees = data.get("fees") or {}
     fee_tokens = fees.get("fee_tokens") or []
@@ -360,6 +409,7 @@ def process_chain_file(chain_file: Path) -> dict[str, Any] | None:
         "grpc": working_grpc,
         "assets_for_db": assets_for_db,
         "endpoints": checked_endpoints,
+        "registry_scope": "testnet" if is_testnet else "mainnet",
     }
 
 
@@ -369,14 +419,21 @@ def main() -> None:
     allowed = load_allowed_directories()
     allowed_norm = {norm(x) for x in allowed}
 
-    chain_files_all = sorted(CHAIN_REGISTRY_DIR.glob("*/chain.json"))
-    chain_files = [
-        p for p in chain_files_all
-        if norm(p.parent.name) in allowed_norm
-    ]
+    chain_files_all = collect_chain_files()
 
-    found_dirs = {norm(p.parent.name) for p in chain_files}
-    missing = [x for x in allowed if norm(x) not in found_dirs]
+    chain_files: list[Path] = []
+    found_allowed: set[str] = set()
+
+    for p in chain_files_all:
+        data = load_json(p)
+        match_keys = build_match_keys(p, data)
+
+        matched = allowed_norm.intersection(match_keys)
+        if matched:
+            chain_files.append(p)
+            found_allowed.update(matched)
+
+    missing = [x for x in allowed if norm(x) not in found_allowed]
 
     print(f"Allowed networks: {len(allowed)}")
     print(f"Matched chain-registry dirs: {len(chain_files)}")
@@ -397,7 +454,7 @@ def main() -> None:
                 if result:
                     results.append(result)
                     print(
-                        f"[OK] {result['directory']}: "
+                        f"[OK] {result['directory']} ({result['registry_scope']}): "
                         f"rpc={result['rpc'] or '-'} "
                         f"rest={result['rest'] or '-'} "
                         f"grpc={result['grpc'] or '-'} "
@@ -475,7 +532,6 @@ def main() -> None:
                     )
                 )
 
-            # перезаполняем network_assets из assetlist
             db.execute(
                 delete(NetworkAsset).where(NetworkAsset.network_id == network.id)
             )

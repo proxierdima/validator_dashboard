@@ -58,7 +58,7 @@ chain_id: mocha-4
  chain_id: elysicstestnet-1 
  valoper_address: elysvaloper1w6phv0xwya5p2sql4qzlh7h2hdeszf49d9t2gr 
  - url: http://135.181.232.179:57657 
- chain_id: pion-1 
+ chain_id: pion-1
  valoper_address: neutronvaloper1g0xlsmw83rtfla5khhrksa3tnmr5mdwu4aj5ue 
  - url: http://51.161.172.90:15700 
  chain_id: barra_9191-1 
@@ -70,7 +70,10 @@ chain_id: mocha-4
  chain_id: bbn-test-5 
  valoper_address: bbnvaloper1hvx5j97cwyvnpztpynk2d9m7jqqax46qks8us5 
  - url: http://135.181.232.241:63657 
- chain_id: agoric-3 
+ chain_id: neutron-1
+ valoper_address: neutronvaloper1md0k6m8y58w8u98x82kjah7r5zcajw7c5v5ypa
+- url: http://135.181.232.179:19657 
+chain_id: agoric-3 
  valoper_address: agoricvaloper13yy5mk8ek8p5kk3e8nleucw003nt2vmzxrdx36 
  - url: http://135.181.232.179:18657 
  chain_id: seq-mainnet-1 

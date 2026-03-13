@@ -7,6 +7,13 @@
     "reason": "no_public_rest"
   },
   {
+    "network": "Neutron",
+    "chain_id": "neutron-1",
+    "valoper": "neutronvaloper1md0k6m8y58w8u98x82kjah7r5zcajw7c5v5ypa",
+    "rest": "https://rest-lb.neutron.org",
+    "reason": "commission_query_failed"
+  },
+  {
     "network": "Lava",
     "chain_id": "lava-mainnet-1",
     "valoper": "lavavaloper1kwk34225f9eq3sklaf7xws8mc9lhu6sxhh57pj",
@@ -14,17 +21,10 @@
     "reason": "commission_query_failed"
   },
   {
-    "network": "Lava",
-    "chain_id": "lava-mainnet-1",
-    "valoper": "lava@valoper1kwk34225f9eq3sklaf7xws8mc9lhu6sxhh57pj",
-    "rest": "https://lava.api.liveraven.net",
-    "reason": "commission_query_failed"
-  },
-  {
-    "network": "Neutron",
-    "chain_id": "neutron-1",
-    "valoper": "neutronvaloper1md0k6m8y58w8u98x82kjah7r5zcajw7c5v5ypa",
-    "rest": "https://rest-lb.neutron.org",
+    "network": "Provenance",
+    "chain_id": "pio-mainnet-1",
+    "valoper": "pbvaloper1fvsqqncjknzhmq0j6z0a3e8rjgudc3uw2xulnt",
+    "rest": "https://provenance.api.m.stavr.tech",
     "reason": "commission_query_failed"
   }
 ]

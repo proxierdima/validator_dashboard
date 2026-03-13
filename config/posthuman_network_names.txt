@@ -38,3 +38,6 @@ union
 wardenprotocol
 zetachain
 dymension
+neutrontestnet
+atomonetestnet
+babylontestnet

@@ -37,6 +37,27 @@ IBC_STABLE_CG_IDS = {"usd-coin", "tether", "dai"}
 DENOM_BLACKLIST_PREFIX = ("pool/",)
 
 
+def normalize(s: str | None) -> str:
+    return (
+        (s or "")
+        .strip()
+        .lower()
+        .replace("-", "")
+        .replace("_", "")
+        .replace(" ", "")
+    )
+
+
+def is_testnet_network_obj(network_name: str | None, display_name: str | None, chain_id: str | None, chain_type: str | None) -> bool:
+    values = [
+        normalize(network_name),
+        normalize(display_name),
+        normalize(chain_id),
+        normalize(chain_type),
+    ]
+    return any("testnet" in v for v in values)
+
+
 def http_get(url, params=None):
     try:
         r = requests.get(url, params=params, timeout=REQUEST_TIMEOUT)
@@ -61,7 +82,13 @@ def fetch_prices_by_ids(ids: set[str]) -> dict[str, float]:
 
 
 def search_price_by_symbol(symbol: str) -> str | None:
-    data = http_get(CG_SEARCH_URL, {"query": symbol})
+    data = http_get(
+        CG_SEARCH_URL,
+        {
+            "query": symbol,
+            "x_cg_demo_api_key": CG_API_KEY,
+        },
+    )
     if not data:
         return None
     for c in data.get("coins", []):
@@ -76,9 +103,11 @@ def get_sources_from_db():
         tracked_rows = db.execute(
             select(
                 TrackedNetwork.network_id,
+                TrackedNetwork.custom_name,
                 Network.name,
                 Network.display_name,
                 Network.chain_id,
+                Network.chain_type,
                 Validator.operator_address,
             )
             .join(Network, Network.id == TrackedNetwork.network_id)
@@ -97,6 +126,18 @@ def get_sources_from_db():
         result = []
 
         for row in tracked_rows:
+            # testnet сюда не пускаем
+            if is_testnet_network_obj(
+                network_name=row.name,
+                display_name=row.display_name,
+                chain_id=row.chain_id,
+                chain_type=row.chain_type,
+            ):
+                continue
+
+            if normalize(row.custom_name).endswith("testnet"):
+                continue
+
             rest_url = db.execute(
                 select(NetworkEndpoint.url)
                 .where(NetworkEndpoint.network_id == row.network_id)
@@ -125,7 +166,9 @@ def get_sources_from_db():
                     "network_id": row.network_id,
                     "network_name": row.display_name or row.name,
                     "network_slug": row.name,
+                    "custom_name": row.custom_name,
                     "chain_id": row.chain_id,
+                    "chain_type": row.chain_type,
                     "valoper": row.operator_address,
                     "rest": rest_url,
                     "asset_map": asset_map,
@@ -201,6 +244,7 @@ def process_network(item: dict):
             {
                 "network": network_name,
                 "chain_id": item["chain_id"],
+                "chain_type": item["chain_type"],
                 "rest_used": item["rest"],
                 "valoper": item["valoper"],
                 "denom": denom,
@@ -286,6 +330,7 @@ def main():
         json.dumps(
             {
                 "status": "ok",
+                "sources_count": len(sources),
                 "rows_count": len(rows),
                 "missing_count": len(missing),
                 "grand_total": round(grand_total, 2),
