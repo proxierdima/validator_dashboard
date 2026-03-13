@@ -1,4 +1,4 @@
-from sqlalchemy import String, Integer, DateTime, ForeignKey, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -18,9 +18,12 @@ class Validator(Base):
     consensus_address: Mapped[str | None] = mapped_column(String(200))
     is_main: Mapped[int] = mapped_column(Integer, default=1)
     is_enabled: Mapped[int] = mapped_column(Integer, default=1)
-
-    created_at: Mapped[DateTime | None] = mapped_column(DateTime)
-    updated_at: Mapped[DateTime | None] = mapped_column(DateTime)
+    created_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[DateTime] = mapped_column(
+        DateTime,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
 
     network = relationship("Network", back_populates="validators")
     current_status = relationship(

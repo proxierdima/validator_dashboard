@@ -3,13 +3,14 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import datetime, timezone
 
-from sqlalchemy import select, func
-from sqlalchemy.orm import Session
+from sqlalchemy import func, select
 
 from app.core.db import SessionLocal
 from app.models import (
+    CollectorRun,
     EndpointCheck,
     Event,
+    GovernanceProposal,
     Network,
     NetworkEndpoint,
     NetworkStatusCurrent,
@@ -52,10 +53,10 @@ def final_overall_status(*statuses: str | None) -> str:
     return "ok"
 
 
-def endpoint_group_status(rows: list[EndpointCheck]) -> str:
+def endpoint_group_status(rows: list[object]) -> str:
     if not rows:
         return "unknown"
-    statuses = [r.status for r in rows]
+    statuses = [getattr(r, 'status', None) for r in rows]
     if any(s == "critical" for s in statuses):
         if all(s == "critical" for s in statuses):
             return "critical"
@@ -79,7 +80,7 @@ def validator_status_from_row(row: ValidatorStatusCurrent | None) -> str:
     return "unknown"
 
 
-def sync_status_from_heights(local_height: int | None, reference_height: int | None) -> tuple[str, int | None]:
+def sync_status_from_heights(local_height: int | None, reference_height: int | None):
     if local_height is None or reference_height is None:
         return "unknown", None
 
@@ -91,10 +92,51 @@ def sync_status_from_heights(local_height: int | None, reference_height: int | N
     return "critical", diff
 
 
+def governance_status_from_rows(rows: list[GovernanceProposal], collector_ok: bool) -> str:
+    if not collector_ok:
+        return "unknown"
+    if not rows:
+        return "ok"
+    if any((row.validator_voted or 0) != 1 for row in rows):
+        return "warning"
+    return "ok"
+
+
+def reward_status_from_events(rows: list[Event], collector_ok: bool) -> str:
+    if not collector_ok:
+        return "unknown"
+    if not rows:
+        return "ok"
+    severities = [row.severity for row in rows]
+    if any(s == "critical" for s in severities):
+        return "critical"
+    if any(s == "warning" for s in severities):
+        return "warning"
+    return "ok"
+
+
+def latest_collector_success_map(db, collector_names: list[str]) -> dict[str, bool]:
+    rows = db.execute(
+        select(CollectorRun.collector_name, func.max(CollectorRun.finished_at))
+        .where(CollectorRun.collector_name.in_(collector_names))
+        .where(CollectorRun.status == "success")
+        .group_by(CollectorRun.collector_name)
+    ).all()
+    result = {name: False for name in collector_names}
+    for name, _ in rows:
+        result[name] = True
+    return result
+
+
 def main() -> None:
     db = SessionLocal()
     try:
         now = datetime.now(timezone.utc)
+
+        collector_success = latest_collector_success_map(
+            db,
+            ["governance_collector", "reward_status_collector"],
+        )
 
         networks = db.execute(
             select(Network).where(Network.is_enabled == 1).order_by(Network.name.asc())
@@ -183,6 +225,26 @@ def main() -> None:
             ).all()
         )
 
+        governance_rows = db.execute(
+            select(GovernanceProposal)
+            .where(GovernanceProposal.network_id.in_(network_ids))
+            .where(GovernanceProposal.is_latest == 1)
+        ).scalars().all()
+        governance_map: dict[int, list[GovernanceProposal]] = defaultdict(list)
+        for row in governance_rows:
+            governance_map[row.network_id].append(row)
+
+        reward_event_rows = db.execute(
+            select(Event)
+            .where(Event.network_id.in_(network_ids))
+            .where(Event.event_type == "reward_status")
+            .where(Event.status == "open")
+        ).scalars().all()
+        reward_event_map: dict[int, list[Event]] = defaultdict(list)
+        for row in reward_event_rows:
+            if row.network_id is not None:
+                reward_event_map[row.network_id].append(row)
+
         existing_rows = db.execute(
             select(NetworkStatusCurrent).where(NetworkStatusCurrent.network_id.in_(network_ids))
         ).scalars().all()
@@ -205,11 +267,16 @@ def main() -> None:
                 local_height = vrow.last_seen_height
 
             reference_height = max(public_rpc_height_map.get(network.id, []) or [0]) or None
-
             sync_status, sync_diff = sync_status_from_heights(local_height, reference_height)
 
-            governance_status = "unknown"
-            reward_status = "unknown"
+            governance_status = governance_status_from_rows(
+                governance_map.get(network.id, []),
+                collector_success["governance_collector"],
+            )
+            reward_status = reward_status_from_events(
+                reward_event_map.get(network.id, []),
+                collector_success["reward_status_collector"],
+            )
 
             overall_status = final_overall_status(
                 validator_status,

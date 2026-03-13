@@ -104,22 +104,34 @@ def load_allowed_directories() -> list[str]:
 
 def parse_endpoints(chain_json: dict[str, Any]) -> list[dict[str, str]]:
     result: list[dict[str, str]] = []
-    apis = chain_json.get("apis") or {}
+    seen: set[tuple[str, str]] = set()
 
+    apis = chain_json.get("apis") or {}
     for endpoint_type in ("rpc", "rest", "grpc"):
         items = apis.get(endpoint_type) or []
-        for idx, item in enumerate(items, start=1):
+
+        counter = 0
+        for item in items:
             address = (item.get("address") or "").strip()
             if not address:
                 continue
 
+            normalized = address.rstrip("/")
+            key = (endpoint_type, normalized)
+
+            if key in seen:
+                continue
+            seen.add(key)
+
+            counter += 1
             result.append(
                 {
                     "endpoint_type": endpoint_type,
-                    "label": f"{endpoint_type}{idx}",
-                    "url": address,
+                    "label": f"{endpoint_type}{counter}",
+                    "url": normalized,
                 }
             )
+
     return result
 
 
@@ -181,7 +193,21 @@ def extract_asset_meta(
             exponent = exp_value
             coingecko_id = cg_id
 
-    return display_denom, exponent, coingecko_id, assets_for_db
+    deduped_assets: list[dict[str, Any]] = []
+    seen_assets: set[tuple[str | None, str | None, str | None]] = set()
+
+    for asset in assets_for_db:
+        key = (
+            asset.get("base_denom"),
+            asset.get("display_denom"),
+            asset.get("symbol"),
+        )
+        if key in seen_assets:
+            continue
+        seen_assets.add(key)
+        deduped_assets.append(asset)
+
+    return display_denom, exponent, coingecko_id, deduped_assets
 
 
 def check_rpc(url: str) -> bool:
@@ -519,18 +545,31 @@ def main() -> None:
                 delete(NetworkEndpoint).where(NetworkEndpoint.network_id == network.id)
             )
 
+            seen_db_eps: set[tuple[str, str]] = set()
+
             for ep in item["endpoints"]:
-                db.add(
-                    NetworkEndpoint(
-                        network_id=network.id,
-                        endpoint_type=ep["endpoint_type"],
-                        label=ep["label"],
-                        url=ep["url"],
-                        priority=1,
-                        is_public=1,
-                        is_enabled=1 if ep["working"] else 0,
-                    )
+                ep_url = (ep["url"] or "").strip().rstrip("/")
+                ep_type = (ep["endpoint_type"] or "").strip()
+
+                if not ep_url or not ep_type:
+                    continue
+
+                key = (ep_type, ep_url)
+                if key in seen_db_eps:
+                    continue
+                seen_db_eps.add(key)
+
+            db.add(
+                NetworkEndpoint(
+                    network_id=network.id,
+                    endpoint_type=ep_type,
+                    label=ep["label"],
+                    url=ep_url,
+                    priority=1,
+                    is_public=1,
+                    is_enabled=1 if ep["working"] else 0,
                 )
+            )
 
             db.execute(
                 delete(NetworkAsset).where(NetworkAsset.network_id == network.id)

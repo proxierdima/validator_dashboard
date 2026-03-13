@@ -1,5 +1,75 @@
 [
   {
+    "network": "Humans.ai",
+    "chain_id": "humans_1089-1",
+    "valoper": "humanvaloper1ndnf0cd75nvz56feqy23um3mq22nlhe9ggu0uh",
+    "rest": null,
+    "reason": "no_public_rest"
+  },
+  {
+    "network": "AtomOne",
+    "chain_id": "atomone-1",
+    "valoper": "atonevaloper1vcp7pkg8sk0n8ylhezxxs8qqrnwfld4dsv2sew",
+    "rest": null,
+    "reason": "no_public_rest"
+  },
+  {
+    "network": "Agoric",
+    "chain_id": "agoric-3",
+    "valoper": "agoricvaloper13yy5mk8ek8p5kk3e8nleucw003nt2vmzxrdx36",
+    "rest": null,
+    "reason": "no_public_rest"
+  },
+  {
+    "network": "Lumen",
+    "chain_id": "lumen",
+    "valoper": "lmnvaloper1m574sszvqxqpxwyf7huqdft54gu2897hprtder",
+    "rest": null,
+    "reason": "no_public_rest"
+  },
+  {
+    "network": "Akash",
+    "chain_id": "akashnet-2",
+    "valoper": "akashvaloper1kudft84reamryp3yyg804202wmc070p9fm3fhk",
+    "rest": null,
+    "reason": "no_public_rest"
+  },
+  {
+    "network": "Stargaze",
+    "chain_id": "stargaze-1",
+    "valoper": "starsvaloper14ftwwcfvhnp3qvxawesjan5duh8rmrkrzdvquy",
+    "rest": null,
+    "reason": "no_public_rest"
+  },
+  {
+    "network": "Fetch.ai",
+    "chain_id": "fetchhub-4",
+    "valoper": "fetchvaloper1y02hlwucl6csz4z02ksn46gzdkmref927l4mug",
+    "rest": null,
+    "reason": "no_public_rest"
+  },
+  {
+    "network": "Elys Network",
+    "chain_id": "elys-1",
+    "valoper": "elysvaloper1w6phv0xwya5p2sql4qzlh7h2hdeszf49d9t2gr",
+    "rest": null,
+    "reason": "no_public_rest"
+  },
+  {
+    "network": "Shentu",
+    "chain_id": "shentu-2.2",
+    "valoper": "shentuvaloper1qqrw7v5xcyxpp3f0gelp08td9q95ayfdugecw0",
+    "rest": null,
+    "reason": "no_public_rest"
+  },
+  {
+    "network": "Axone",
+    "chain_id": "axone-1",
+    "valoper": "axonevaloper1ydnn9wtnlmw99zr66s6p9k7pg48zgjewk4pw53",
+    "rest": null,
+    "reason": "no_public_rest"
+  },
+  {
     "network": "Secret Network",
     "chain_id": "secret-4",
     "valoper": "secretvaloper1f8chr3y3s9h8g4vc5pg8wvzzhfy3hcxm0re5zc",
@@ -7,24 +77,157 @@
     "reason": "no_public_rest"
   },
   {
+    "network": "KYVE",
+    "chain_id": "kyve-1",
+    "valoper": "kyvevaloper16hnse4c852xg4vxjnqhx648e02z32n72l66nv7",
+    "rest": null,
+    "reason": "no_public_rest"
+  },
+  {
+    "network": "Warden",
+    "chain_id": "warden_8765-1",
+    "valoper": "wardenvaloper12de4mzezcvhauqxcszrhkdagwv8lwqs9uvla75",
+    "rest": null,
+    "reason": "no_public_rest"
+  },
+  {
+    "network": "Aura Network",
+    "chain_id": "aura_6322-2",
+    "valoper": "auravaloper15pzl0s6ym85qx4yeq29rflp702wtx3dntle05a",
+    "rest": null,
+    "reason": "no_public_rest"
+  },
+  {
     "network": "Neutron",
     "chain_id": "neutron-1",
     "valoper": "neutronvaloper1md0k6m8y58w8u98x82kjah7r5zcajw7c5v5ypa",
-    "rest": "https://rest-lb.neutron.org",
-    "reason": "commission_query_failed"
+    "rest": null,
+    "reason": "no_public_rest"
   },
   {
-    "network": "Lava",
-    "chain_id": "lava-mainnet-1",
-    "valoper": "lavavaloper1kwk34225f9eq3sklaf7xws8mc9lhu6sxhh57pj",
-    "rest": "https://lava.api.liveraven.net",
-    "reason": "commission_query_failed"
+    "network": "Osmosis",
+    "chain_id": "osmosis-1",
+    "valoper": "osmovaloper1e8238v24qccht9mqc2w0r4luq462yxttfpaeam",
+    "rest": null,
+    "reason": "no_public_rest"
+  },
+  {
+    "network": "FIRMACHAIN",
+    "chain_id": "colosseum-1",
+    "valoper": "firmavaloper143v9wpr870kt22gmtxgl7tc72twkd6z48h5yaj",
+    "rest": null,
+    "reason": "no_public_rest"
+  },
+  {
+    "network": "Sunrise",
+    "chain_id": "sunrise-1",
+    "valoper": "sunrisevaloper1a5t392uyw8x0dmul48lfrt6n7emvmzt0svc82e",
+    "rest": null,
+    "reason": "no_public_rest"
+  },
+  {
+    "network": "Juno",
+    "chain_id": "juno-1",
+    "valoper": "junovaloper1e8238v24qccht9mqc2w0r4luq462yxttjzn7qt",
+    "rest": null,
+    "reason": "no_public_rest"
   },
   {
     "network": "Provenance",
     "chain_id": "pio-mainnet-1",
     "valoper": "pbvaloper1fvsqqncjknzhmq0j6z0a3e8rjgudc3uw2xulnt",
-    "rest": "https://provenance.api.m.stavr.tech",
-    "reason": "commission_query_failed"
+    "rest": null,
+    "reason": "no_public_rest"
+  },
+  {
+    "network": "Persistence",
+    "chain_id": "core-1",
+    "valoper": "persistencevaloper10sc98vt6saux8asexnsp2hgvkgmjmful8w5cuw",
+    "rest": null,
+    "reason": "no_public_rest"
+  },
+  {
+    "network": "Stargaze",
+    "chain_id": "stargaze-1",
+    "valoper": "starsvaloper1jg39wazpukeqcytuuad7tsn3end22spg2m4u0x",
+    "rest": null,
+    "reason": "no_public_rest"
+  },
+  {
+    "network": "Cosmos Hub",
+    "chain_id": "cosmoshub-4",
+    "valoper": "cosmosvaloper157v7tczs40axfgejp2m43kwuzqe0wsy0rv8puv",
+    "rest": null,
+    "reason": "no_public_rest"
+  },
+  {
+    "network": "BeeZee",
+    "chain_id": "beezee-1",
+    "valoper": "bzevaloper1xq38qxad2eumdaytrejnmypqaay8dtmukz72re",
+    "rest": null,
+    "reason": "no_public_rest"
+  },
+  {
+    "network": "Lava",
+    "chain_id": "lava-mainnet-1",
+    "valoper": "lavavaloper1kwk34225f9eq3sklaf7xws8mc9lhu6sxhh57pj",
+    "rest": null,
+    "reason": "no_public_rest"
+  },
+  {
+    "network": "Babylon Genesis",
+    "chain_id": "bbn-1",
+    "valoper": "bbnvaloper1q3m4m0zmrhkw7zdldehcu8raxsmdpxp0npp52s",
+    "rest": null,
+    "reason": "no_public_rest"
+  },
+  {
+    "network": "Axelar",
+    "chain_id": "axelar-dojo-1",
+    "valoper": "axelarvaloper1ftqma496np33y054x6gjeh2maxy00e00p2nl9l",
+    "rest": null,
+    "reason": "no_public_rest"
+  },
+  {
+    "network": "Celestia",
+    "chain_id": "celestia",
+    "valoper": "celestiavaloper1snun9qqk9eussvyhkqm03lz6f265ekhnnlw043",
+    "rest": null,
+    "reason": "no_public_rest"
+  },
+  {
+    "network": "Bitway",
+    "chain_id": "bitway-1",
+    "valoper": "bitwayvaloper1qqwp68scpqz3qrq3ru8p5rsuzsy3w9caqgqp2zchpqf32zsdqgt3znlg0ax",
+    "rest": null,
+    "reason": "no_public_rest"
+  },
+  {
+    "network": "Oraichain",
+    "chain_id": "Oraichain",
+    "valoper": "oraivaloper1gvk3caqtdnwhff60ndm29tp0m7p8e57zgx588h",
+    "rest": null,
+    "reason": "no_public_rest"
+  },
+  {
+    "network": "Dungeon Chain",
+    "chain_id": "dungeon-1",
+    "valoper": "dungeonvaloper1umkse9yx2w9aw5qam0gffatfht3yerllxcque3",
+    "rest": null,
+    "reason": "no_public_rest"
+  },
+  {
+    "network": "Nolus",
+    "chain_id": "pirin-1",
+    "valoper": "nolusvaloper108wunsvlzm7l6pf456ntw9e84gp3zkv23mydme",
+    "rest": null,
+    "reason": "no_public_rest"
+  },
+  {
+    "network": "ZetaChain",
+    "chain_id": "zetachain_7000-1",
+    "valoper": "zetavaloper1mj5uvv4703fwvna0t622yj9386cfwavr2hl6q4",
+    "rest": null,
+    "reason": "no_public_rest"
   }
 ]

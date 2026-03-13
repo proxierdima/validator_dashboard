@@ -1,4 +1,4 @@
-from sqlalchemy import String, Integer, DateTime, ForeignKey
+from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -6,18 +6,29 @@ from app.models.base import Base
 
 class NetworkEndpoint(Base):
     __tablename__ = "network_endpoints"
+    __table_args__ = (
+        UniqueConstraint(
+            "network_id",
+            "endpoint_type",
+            "url",
+            name="uq_network_endpoint_network_type_url",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     network_id: Mapped[int] = mapped_column(ForeignKey("networks.id"), index=True)
-    endpoint_type: Mapped[str] = mapped_column(String(20))   # rpc, rest, grpc
-    label: Mapped[str | None] = mapped_column(String(20))    # rpc1, rpc2, rest1
+    endpoint_type: Mapped[str] = mapped_column(String(20))  # rpc, rest, grpc
+    label: Mapped[str | None] = mapped_column(String(20))  # rpc1, rpc2, rest1
     url: Mapped[str] = mapped_column(String(500))
     priority: Mapped[int] = mapped_column(Integer, default=1)
     is_public: Mapped[int] = mapped_column(Integer, default=1)
     is_enabled: Mapped[int] = mapped_column(Integer, default=1)
-
-    created_at: Mapped[DateTime | None] = mapped_column(DateTime)
-    updated_at: Mapped[DateTime | None] = mapped_column(DateTime)
+    created_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[DateTime] = mapped_column(
+        DateTime,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
 
     network = relationship("Network", back_populates="endpoints")
     checks = relationship(
@@ -32,7 +43,7 @@ class EndpointCheck(Base):
     endpoint_id: Mapped[int] = mapped_column(
         ForeignKey("network_endpoints.id"), index=True
     )
-    status: Mapped[str] = mapped_column(String(20), index=True)   # ok, warning, critical
+    status: Mapped[str] = mapped_column(String(20), index=True)  # ok, warning, critical
     http_status: Mapped[int | None] = mapped_column(Integer)
     latency_ms: Mapped[int | None] = mapped_column(Integer)
     remote_height: Mapped[int | None] = mapped_column(Integer)

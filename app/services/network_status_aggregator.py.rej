@@ -1,0 +1,18 @@
+diff a/app/services/network_status_aggregator.py b/app/services/network_status_aggregator.py	(rejected hunks)
+@@ -3,13 +3,14 @@ from __future__ import annotations
+ from collections import defaultdict
+ from datetime import datetime, timezone
+ 
+-from sqlalchemy import select, func
+-from sqlalchemy.orm import Session
++from sqlalchemy import func, select
+ 
+ from app.core.db import SessionLocal
+ from app.models import (
++    CollectorRun,
+     EndpointCheck,
+     Event,
++    GovernanceProposal,
+     Network,
+     NetworkEndpoint,
+     NetworkStatusCurrent,

@@ -1,4 +1,4 @@
-from sqlalchemy import String, Integer, DateTime, ForeignKey
+from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -6,6 +6,14 @@ from app.models.base import Base
 
 class SnapshotTarget(Base):
     __tablename__ = "snapshot_targets"
+    __table_args__ = (
+        UniqueConstraint(
+            "network_id",
+            "snapshot_path",
+            "filename_pattern",
+            name="uq_snapshot_target_network_path_pattern",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     network_id: Mapped[int] = mapped_column(ForeignKey("networks.id"), index=True)
@@ -15,9 +23,12 @@ class SnapshotTarget(Base):
     min_expected_size_bytes: Mapped[int | None] = mapped_column(Integer)
     max_age_hours: Mapped[int] = mapped_column(Integer, default=24)
     is_enabled: Mapped[int] = mapped_column(Integer, default=1)
-
-    created_at: Mapped[DateTime | None] = mapped_column(DateTime)
-    updated_at: Mapped[DateTime | None] = mapped_column(DateTime)
+    created_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[DateTime] = mapped_column(
+        DateTime,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
 
     network = relationship("Network", back_populates="snapshot_targets")
     checks = relationship(
