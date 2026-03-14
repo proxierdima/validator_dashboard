@@ -244,6 +244,43 @@ def get_latest_rpc_status_by_network(conn):
             result[network_id] = row
     return result
 
+
+def format_number(value, decimals: int = 2) -> str:
+    if value in (None, "", 0, "0"):
+        return "—"
+    try:
+        num = float(value)
+    except Exception:
+        return str(value)
+
+    if num.is_integer():
+        return str(int(num))
+
+    return f"{num:.{decimals}f}".rstrip("0").rstrip(".")
+
+
+def format_percent_from_ratio(value, decimals: int = 2) -> str:
+    if value in (None, "", 0, "0"):
+        return "—"
+    try:
+        num = float(value) * 100
+    except Exception:
+        return str(value)
+
+    if num.is_integer():
+        return f"{int(num)}%"
+
+    return f"{num:.{decimals}f}".rstrip("0").rstrip(".") + "%"
+
+
+def format_yes_no(value) -> str:
+    if value in (True, 1, "1", "true", "True", "yes", "Yes"):
+        return "yes"
+    if value in (False, 0, "0", "false", "False", "no", "No"):
+        return "no"
+    return "—"
+
+
 def get_dashboard_rows(conn):
     latest_validator_rpc_rows = get_latest_rpc_status_by_network(conn)
 
@@ -253,6 +290,9 @@ def get_dashboard_rows(conn):
             n.id AS network_id,
             n.name,
             COALESCE(n.display_name, n.name) AS display_name,
+            n.chain_id AS chain_id,
+            n.chain_type AS chain_type,
+            n.network_type AS network_type,
             v.operator_address AS valoper_address,
             COALESCE(v.moniker, 'unknown') AS moniker,
             COALESCE(nsc.validator_status, 'unknown') AS validator_status,
@@ -309,6 +349,16 @@ def get_dashboard_rows(conn):
     for row in rows:
         item = dict(row)
 
+        network_type = item.get("network_type")
+        chain_id = item.get("chain_id")
+
+        if chain_id and network_type:
+            item["chain_display"] = f"{network_type} ({chain_id})"
+        elif chain_id:
+            item["chain_display"] = chain_id
+        else:
+            item["chain_display"] = "—"
+
         validator_rpc = latest_validator_rpc_rows.get(row["network_id"])
         if validator_rpc:
             item["validator_rpc_status"] = validator_rpc["status"] or "unknown"
@@ -337,7 +387,7 @@ def get_dashboard_rows(conn):
         item["validator_rpc_emoji"] = status_emoji(item["validator_rpc_status"])
 
         item["validator_status_display"] = display_value(item.get("validator_chain_status"))
-        item["validator_jailed_display"] = bool_display(item.get("validator_jailed"))
+        item["validator_jailed_display"] = format_yes_no(item.get("validator_jailed"))
         item["validator_commission_display"] = format_percent_from_ratio(item.get("validator_commission_rate"))
         item["validator_self_delegation_display"] = format_number(item.get("validator_self_delegation_amount"))
         item["validator_total_delegation_display"] = format_number(item.get("validator_total_delegation_amount"))

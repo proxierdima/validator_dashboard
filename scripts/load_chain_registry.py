@@ -88,6 +88,15 @@ def norm(value: str | None) -> str:
     return (value or "").strip().lower().replace("-", "").replace("_", "").replace(" ", "")
 
 
+def join_values(values: list[Any]) -> str | None:
+    cleaned: list[str] = []
+    for v in values:
+        if v in (None, "", [], {}):
+            continue
+        cleaned.append(str(v))
+    return ",".join(cleaned) if cleaned else None
+
+
 def load_allowed_directories() -> list[str]:
     if not NETWORKS_FILE.exists():
         raise FileNotFoundError(f"Missing file: {NETWORKS_FILE}")
@@ -100,6 +109,26 @@ def load_allowed_directories() -> list[str]:
         result.append(line)
 
     return result
+
+
+def detect_network_type(chain_file: Path, chain_json: dict[str, Any] | None = None) -> str:
+    """
+    Берем network_type из chain.json, если есть.
+    Иначе:
+    - если путь содержит testnets -> testnet
+    - иначе -> mainnet
+    """
+    value = (chain_json or {}).get("network_type")
+    if isinstance(value, str) and value.strip():
+        v = value.strip().lower()
+        if "test" in v:
+            return "testnet"
+        if "main" in v:
+            return "mainnet"
+        return v
+
+    parts = {p.lower() for p in chain_file.parts}
+    return "testnet" if "testnets" in parts else "mainnet"
 
 
 def parse_endpoints(chain_json: dict[str, Any]) -> list[dict[str, str]]:
@@ -118,12 +147,12 @@ def parse_endpoints(chain_json: dict[str, Any]) -> list[dict[str, str]]:
 
             normalized = address.rstrip("/")
             key = (endpoint_type, normalized)
-
             if key in seen:
                 continue
-            seen.add(key)
 
+            seen.add(key)
             counter += 1
+
             result.append(
                 {
                     "endpoint_type": endpoint_type,
@@ -139,13 +168,6 @@ def extract_asset_meta(
     assetlist_json: dict[str, Any] | None,
     base_denom: str | None,
 ) -> tuple[str | None, int | None, str | None, list[dict[str, Any]]]:
-    """
-    Возвращает:
-    - display_denom
-    - exponent
-    - coingecko_id
-    - assets_for_db
-    """
     if not assetlist_json:
         return None, None, None, []
 
@@ -164,6 +186,7 @@ def extract_asset_meta(
 
         denom_units = asset.get("denom_units") or []
         exp_value = None
+
         if asset_display:
             for du in denom_units:
                 if du.get("denom") == asset_display:
@@ -222,7 +245,12 @@ def check_rpc(url: str) -> bool:
             r = requests.get(candidate, timeout=HTTP_TIMEOUT, headers=headers)
             if r.status_code == 200:
                 body = r.text.lower()
-                if "jsonrpc" in body or "node_info" in body or "latest_block_height" in body or "result" in body:
+                if (
+                    "jsonrpc" in body
+                    or "node_info" in body
+                    or "latest_block_height" in body
+                    or "result" in body
+                ):
                     return True
         except Exception:
             pass
@@ -272,14 +300,6 @@ def is_endpoint_working(endpoint_type: str, url: str) -> bool:
 
 
 def build_match_keys(chain_file: Path, chain_json: dict[str, Any] | None = None) -> set[str]:
-    """
-    Возвращает набор normalized-ключей, по которым можно матчить запись
-    из config/posthuman_network_names.txt.
-
-    Поддерживает:
-    - mainnet: chain-registry/<dir>/chain.json
-    - testnet: chain-registry/testnets/<dir>/chain.json
-    """
     keys: set[str] = set()
 
     directory = chain_file.parent.name
@@ -314,6 +334,15 @@ def collect_chain_files() -> list[Path]:
     return mainnet_files + testnet_files
 
 
+def pick_first_two(endpoints: list[dict[str, Any]], endpoint_type: str) -> tuple[str | None, str | None]:
+    urls = [x["url"] for x in endpoints if x["endpoint_type"] == endpoint_type and x.get("working")]
+    if not urls:
+        return None, None
+    if len(urls) == 1:
+        return urls[0], None
+    return urls[0], urls[1]
+
+
 def process_chain_file(chain_file: Path) -> dict[str, Any] | None:
     parent_name = chain_file.parent.name
     if parent_name.startswith("."):
@@ -341,23 +370,52 @@ def process_chain_file(chain_file: Path) -> dict[str, Any] | None:
     )
 
     chain_id = data.get("chain_id")
-    chain_type = "cosmos_testnet" if is_testnet else "cosmos"
+    chain_type = first_nonempty(data.get("chain_type"), "cosmos")
+    network_type = detect_network_type(chain_file, data)
+    status = data.get("status")
+    website = data.get("website")
+    bech32_prefix = data.get("bech32_prefix")
+    daemon_name = data.get("daemon_name")
+    node_home = data.get("node_home")
+    key_algos = join_values(data.get("key_algos") or [])
+
+    try:
+        slip44 = int(data.get("slip44")) if data.get("slip44") is not None else None
+    except Exception:
+        slip44 = None
 
     fees = data.get("fees") or {}
-    fee_tokens = fees.get("fee_tokens") or []
+    fee_tokens_raw = fees.get("fee_tokens") or []
+
     base_denom = None
     display_denom = None
     exponent = None
     coingecko_id = None
 
-    if fee_tokens:
-        fee0 = fee_tokens[0]
+    if fee_tokens_raw:
+        fee0 = fee_tokens_raw[0]
         base_denom = fee0.get("denom")
         display_denom = first_nonempty(
             fee0.get("display_denom"),
             fee0.get("symbol"),
             fee0.get("denom"),
         )
+
+    fee_tokens = join_values([x.get("denom") for x in fee_tokens_raw])
+    fixed_min_gas_price = join_values([x.get("fixed_min_gas_price") for x in fee_tokens_raw])
+    low_gas_price = join_values([x.get("low_gas_price") for x in fee_tokens_raw])
+    average_gas_price = join_values([x.get("average_gas_price") for x in fee_tokens_raw])
+    high_gas_price = join_values([x.get("high_gas_price") for x in fee_tokens_raw])
+
+    staking = data.get("staking") or {}
+    staking_tokens_raw = staking.get("staking_tokens") or []
+    staking_tokens = join_values([x.get("denom") for x in staking_tokens_raw])
+
+    codebase = data.get("codebase") or {}
+    git_repo = codebase.get("git_repo")
+    recommended_version = codebase.get("recommended_version")
+    compatible_versions = join_values(codebase.get("compatible_versions") or [])
+    genesis_url = ((codebase.get("genesis") or {}).get("genesis_url"))
 
     assetlist_file = chain_file.parent / "assetlist.json"
     assetlist_data = load_json(assetlist_file) if assetlist_file.exists() else None
@@ -420,19 +478,47 @@ def process_chain_file(chain_file: Path) -> dict[str, Any] | None:
             elif ep["endpoint_type"] == "grpc" and working_grpc is None:
                 working_grpc = ep["url"]
 
+    rpc1, rpc2 = pick_first_two(checked_endpoints, "rpc")
+    rest1, rest2 = pick_first_two(checked_endpoints, "rest")
+    grpc1, grpc2 = pick_first_two(checked_endpoints, "grpc")
+
     return {
         "directory": directory,
         "name": name,
         "display_name": display_name,
         "chain_id": chain_id,
         "chain_type": chain_type,
+        "network_type": network_type,
+        "status": status,
+        "website": website,
+        "bech32_prefix": bech32_prefix,
+        "daemon_name": daemon_name,
+        "node_home": node_home,
+        "key_algos": key_algos,
+        "slip44": slip44,
         "base_denom": base_denom,
         "display_denom": display_denom,
         "exponent": exponent,
         "coingecko_id": coingecko_id,
+        "fee_tokens": fee_tokens,
+        "fixed_min_gas_price": fixed_min_gas_price,
+        "low_gas_price": low_gas_price,
+        "average_gas_price": average_gas_price,
+        "high_gas_price": high_gas_price,
+        "staking_tokens": staking_tokens,
+        "git_repo": git_repo,
+        "recommended_version": recommended_version,
+        "compatible_versions": compatible_versions,
+        "genesis_url": genesis_url,
         "rpc": working_rpc,
         "rest": working_rest,
         "grpc": working_grpc,
+        "rpc1": rpc1,
+        "rest1": rest1,
+        "grpc1": grpc1,
+        "rpc2": rpc2,
+        "rest2": rest2,
+        "grpc2": grpc2,
         "assets_for_db": assets_for_db,
         "endpoints": checked_endpoints,
         "registry_scope": "testnet" if is_testnet else "mainnet",
@@ -481,6 +567,7 @@ def main() -> None:
                     results.append(result)
                     print(
                         f"[OK] {result['directory']} ({result['registry_scope']}): "
+                        f"network_type={result['network_type']} "
                         f"rpc={result['rpc'] or '-'} "
                         f"rest={result['rest'] or '-'} "
                         f"grpc={result['grpc'] or '-'} "
@@ -514,13 +601,37 @@ def main() -> None:
                     directory=directory,
                     chain_id=chain_id,
                     chain_type=item["chain_type"],
+                    network_type=item["network_type"],
+                    status=item["status"],
+                    website=item["website"],
+                    bech32_prefix=item["bech32_prefix"],
+                    daemon_name=item["daemon_name"],
+                    node_home=item["node_home"],
+                    key_algos=item["key_algos"],
+                    slip44=item["slip44"],
                     base_denom=item["base_denom"],
                     display_denom=item["display_denom"],
                     exponent=item["exponent"],
                     coingecko_id=item["coingecko_id"],
+                    fee_tokens=item["fee_tokens"],
+                    fixed_min_gas_price=item["fixed_min_gas_price"],
+                    low_gas_price=item["low_gas_price"],
+                    average_gas_price=item["average_gas_price"],
+                    high_gas_price=item["high_gas_price"],
+                    staking_tokens=item["staking_tokens"],
+                    git_repo=item["git_repo"],
+                    recommended_version=item["recommended_version"],
+                    compatible_versions=item["compatible_versions"],
+                    genesis_url=item["genesis_url"],
                     rpc=item["rpc"],
                     rest=item["rest"],
                     grpc=item["grpc"],
+                    rpc1=item["rpc1"],
+                    rest1=item["rest1"],
+                    grpc1=item["grpc1"],
+                    rpc2=item["rpc2"],
+                    rest2=item["rest2"],
+                    grpc2=item["grpc2"],
                     is_enabled=1,
                 )
                 db.add(network)
@@ -531,13 +642,37 @@ def main() -> None:
                 network.directory = directory
                 network.chain_id = item["chain_id"]
                 network.chain_type = item["chain_type"]
+                network.network_type = item["network_type"]
+                network.status = item["status"]
+                network.website = item["website"]
+                network.bech32_prefix = item["bech32_prefix"]
+                network.daemon_name = item["daemon_name"]
+                network.node_home = item["node_home"]
+                network.key_algos = item["key_algos"]
+                network.slip44 = item["slip44"]
                 network.base_denom = item["base_denom"]
                 network.display_denom = item["display_denom"]
                 network.exponent = item["exponent"]
                 network.coingecko_id = item["coingecko_id"]
+                network.fee_tokens = item["fee_tokens"]
+                network.fixed_min_gas_price = item["fixed_min_gas_price"]
+                network.low_gas_price = item["low_gas_price"]
+                network.average_gas_price = item["average_gas_price"]
+                network.high_gas_price = item["high_gas_price"]
+                network.staking_tokens = item["staking_tokens"]
+                network.git_repo = item["git_repo"]
+                network.recommended_version = item["recommended_version"]
+                network.compatible_versions = item["compatible_versions"]
+                network.genesis_url = item["genesis_url"]
                 network.rpc = item["rpc"]
                 network.rest = item["rest"]
                 network.grpc = item["grpc"]
+                network.rpc1 = item["rpc1"]
+                network.rest1 = item["rest1"]
+                network.grpc1 = item["grpc1"]
+                network.rpc2 = item["rpc2"]
+                network.rest2 = item["rest2"]
+                network.grpc2 = item["grpc2"]
                 network.is_enabled = 1
                 db.flush()
 
@@ -559,17 +694,17 @@ def main() -> None:
                     continue
                 seen_db_eps.add(key)
 
-            db.add(
-                NetworkEndpoint(
-                    network_id=network.id,
-                    endpoint_type=ep_type,
-                    label=ep["label"],
-                    url=ep_url,
-                    priority=1,
-                    is_public=1,
-                    is_enabled=1 if ep["working"] else 0,
+                db.add(
+                    NetworkEndpoint(
+                        network_id=network.id,
+                        endpoint_type=ep_type,
+                        label=ep["label"],
+                        url=ep_url,
+                        priority=1,
+                        is_public=1,
+                        is_enabled=1 if ep["working"] else 0,
+                    )
                 )
-            )
 
             db.execute(
                 delete(NetworkAsset).where(NetworkAsset.network_id == network.id)

@@ -47,7 +47,7 @@
         <td>{{ row.overall_emoji }} {{ row.overall_status or 'unknown' }}</td>
         <td>
           <strong>{{ row.display_name or row.name }}</strong><br>
-          <span class="muted">{{ row.name }}</span>
+          <span class="muted mono">{{ row.chain_display }}</span>
         </td>
         <td>
           {{ row.validator_emoji }} {{ row.validator_status or 'unknown' }}<br>
